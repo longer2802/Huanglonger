@@ -1,0 +1,22 @@
+{
+  "app": "food-map",
+  "version": 1,
+  "count": 1,
+  "places": [
+    {
+      "name": "艾格森蛋餅 EGG GROVE（屏東九如店）",
+      "category": "早午餐",
+      "address": "904屏東縣九如鄉東寧村成功二街40號",
+      "county_code": "10013",
+      "county_name": "屏東縣",
+      "town_code": "10013080",
+      "town_name": "九如鄉",
+      "source_platform": "Google 商家",
+      "source_url": "",
+      "note": "主打現點現做的手作粉漿蛋餅。電話 0989 800 861。落點請在 App 內確認後補上。",
+      "tags": ["蛋餅", "自家店"],
+      "visit_status": "visited",
+      "location_status": "pending"
+    }
+  ]
+}
