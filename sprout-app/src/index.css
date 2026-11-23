@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 小芽: cream white, soft sage, apricot. Warnings use high-contrast red with a symbol and words. */
+@layer base {
+  :root {
+    --background: 40 52% 96%;
+    --foreground: 150 18% 16%;
+    --card: 40 60% 99%;
+    --card-foreground: 150 18% 16%;
+    --popover: 40 60% 99%;
+    --popover-foreground: 150 18% 16%;
+    --primary: 136 15% 36%;
+    --primary-foreground: 40 60% 99%;
+    --secondary: 120 20% 90%;
+    --secondary-foreground: 140 22% 22%;
+    --muted: 40 25% 91%;
+    --muted-foreground: 150 8% 34%;
+    --accent: 28 88% 86%;
+    --accent-foreground: 20 55% 22%;
+    --destructive: 0 75% 36%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 22% 84%;
+    --input: 40 18% 78%;
+    --ring: 136 18% 40%;
+    --radius: 1rem;
+    --alert-bg: 0 85% 96%;
+    --alert-fg: 0 75% 26%;
+    --apricot-strong: 22 70% 36%;
+    --sage-soft: 118 26% 88%;
+    --apricot-soft: 30 90% 90%;
+    --chart-1: 136 15% 36%;
+    --chart-2: 28 80% 60%;
+    --chart-3: 200 30% 40%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 0 60% 50%;
+    --font-heading: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --font-display: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sidebar-background: 40 52% 96%;
+    --sidebar-foreground: 150 18% 16%;
+    --sidebar-primary: 136 15% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 120 20% 90%;
+    --sidebar-accent-foreground: 140 22% 22%;
+    --sidebar-border: 40 22% 84%;
+    --sidebar-ring: 136 18% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input[type="date"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
