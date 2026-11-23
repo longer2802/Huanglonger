@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "小芽｜媽媽寶寶手冊" },
       { name: "description", content: "從第一次產檢，到寶寶的每一個第一次。免登入、資料只存在自己的手機。" },
-      { name: "theme-color", content: "#4E6B55" },
+      { name: "theme-color", content: "#FFE3EE" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-title", content: "小芽" },

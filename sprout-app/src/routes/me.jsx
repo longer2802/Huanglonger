@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Baby, BellRing, Download, FileLock2, FlaskConical, HeartHandshake, Library, Plus, Smartphone, Trash2, Upload } from "lucide-react";
+import { Baby, BellRing, CalendarHeart, Download, FileLock2, FlaskConical, HeartHandshake, Library, Plus, Smartphone, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
-import { Btn, Card, Confirm, Field, inputClass, SectionTitle, Sheet } from "@/components/kit";
+import { Btn, Card, Confirm, Field, Fold, inputClass, SectionTitle, Sheet } from "@/components/kit";
 import { BabyForm, PregnancyForm } from "@/components/Forms";
 import { personName } from "@/components/CarePrompt";
 import {
@@ -184,8 +184,7 @@ function PregnancyDates() {
     }
   };
   return (
-    <section>
-      <SectionTitle>孕期日期</SectionTitle>
+    <Fold title="孕期日期" icon={CalendarHeart}>
       <Card className="space-y-4">
         <p className="text-sm text-muted-foreground">目前預產期 {formatDate(family.edd, { weekday: true })}。修改後，只會重算尚未預約、尚未完成的建議時程。</p>
         <PregnancyForm value={value} onChange={setValue} showErrors={tried} />
@@ -193,7 +192,7 @@ function PregnancyDates() {
           更新日期
         </Btn>
       </Card>
-    </section>
+    </Fold>
   );
 }
 
@@ -214,8 +213,7 @@ function BirthSwitch() {
     }
   };
   return (
-    <section id="birth" className="scroll-mt-20">
-      <SectionTitle>寶寶出生了</SectionTitle>
+    <Fold id="birth" title="寶寶出生了" icon={Baby}>
       <Card className="space-y-4">
         <p className="text-sm leading-relaxed text-muted-foreground">會新增寶寶檔案、開啟媽媽的產後追蹤；孕期時間軸與紀錄全部保留。雙胞胎可在完成後到「家人」再新增一位寶寶。</p>
         <BabyForm value={baby} onChange={setBaby} full={false} />
@@ -227,7 +225,7 @@ function BirthSwitch() {
         </Btn>
       </Card>
       <Confirm open={confirm} title="切換為出生後？" body="未完成的產檢建議會標示為「已取消（寶寶已出生）」，已完成的紀錄不變。" confirmLabel="確定切換" onCancel={() => setConfirm(false)} onConfirm={go} />
-    </section>
+    </Fold>
   );
 }
 
@@ -242,8 +240,7 @@ function ReminderSettings() {
     });
   }, []);
   return (
-    <section>
-      <SectionTitle>提醒與行事曆</SectionTitle>
+    <Fold title="提醒與行事曆" icon={BellRing}>
       <Card className="space-y-3">
         <label className="flex min-h-[48px] items-center justify-between gap-3">
           <span>
@@ -269,14 +266,13 @@ function ReminderSettings() {
           <p>背景推播：第一版未啟用（需要排程伺服器與真機驗證）。App 關閉時的提醒請用手機行事曆。</p>
         </div>
       </Card>
-    </section>
+    </Fold>
   );
 }
 
 function InstallGuide() {
   return (
-    <section>
-      <SectionTitle>加入手機主畫面</SectionTitle>
+    <Fold title="加入手機主畫面" icon={Smartphone}>
       <Card className="space-y-2 text-[15px] leading-relaxed">
         <p className="flex items-center gap-1.5 font-bold">
           <Smartphone className="h-5 w-5 text-primary" /> iPhone（Safari）
@@ -288,7 +284,7 @@ function InstallGuide() {
         <p>按右上「⋮」→「加到主畫面」或「安裝應用程式」。</p>
         <p className="text-[13px] text-muted-foreground">加入主畫面後，資料仍存在同一個瀏覽器裡；用其他瀏覽器開啟會看不到。</p>
       </Card>
-    </section>
+    </Fold>
   );
 }
 
@@ -360,8 +356,7 @@ function BackupSection() {
   const current = summarize(snapshotForBackup());
 
   return (
-    <section>
-      <SectionTitle>備份與還原</SectionTitle>
+    <Fold title="備份與還原" icon={FileLock2}>
       <Card className="space-y-4">
         <p className="rounded-2xl bg-accent px-3 py-2 text-[14px] font-semibold leading-relaxed text-accent-foreground">
           ⚠ 資料只存在這支手機的瀏覽器。換手機、清除瀏覽器資料或移除主畫面圖示前，請先備份。
@@ -424,7 +419,7 @@ function BackupSection() {
           ) : null
         }
       />
-    </section>
+    </Fold>
   );
 }
 
@@ -437,8 +432,7 @@ function DemoSection() {
     setWhich(null);
   };
   return (
-    <section>
-      <SectionTitle>範例資料</SectionTitle>
+    <Fold title="範例資料" icon={FlaskConical}>
       <Card className="space-y-3">
         <p className="text-sm text-muted-foreground">用虛構家庭試用所有功能。{family?.demo ? "目前顯示的是範例資料。" : ""}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -463,7 +457,7 @@ function DemoSection() {
         ) : null}
       </Card>
       <Confirm open={!!which} title="載入範例資料？" body={family && !family.demo ? "目前的家庭資料會被範例取代。請先備份。" : "會取代目前的範例資料。"} danger={!!family && !family.demo} confirmLabel="載入" onCancel={() => setWhich(null)} onConfirm={load} />
-    </section>
+    </Fold>
   );
 }
 
@@ -471,8 +465,7 @@ function DangerZone() {
   const [step, setStep] = useState(0);
   const [typed, setTyped] = useState("");
   return (
-    <section>
-      <SectionTitle>刪除全部資料</SectionTitle>
+    <Fold title="刪除全部資料" icon={Trash2}>
       <Card className="space-y-3 border-destructive/40">
         <p className="text-sm text-muted-foreground">刪除這支手機上小芽的所有家人、紀錄、待辦與回答。已匯出到手機行事曆的事件不會被刪除。</p>
         <Btn variant="danger" className="w-full" onClick={() => setStep(1)}>
@@ -503,6 +496,6 @@ function DangerZone() {
           {(id) => <input id={id} className={inputClass} value={typed} onChange={(e) => setTyped(e.target.value)} />}
         </Field>
       </Sheet>
-    </section>
+    </Fold>
   );
 }

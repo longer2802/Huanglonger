@@ -1,6 +1,7 @@
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, X } from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
+import { AlertTriangle, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Small, dependency-free building blocks sized for one-handed phone use.
@@ -175,4 +176,36 @@ export function Empty({ icon: Icon, title, children }) {
 
 export function FamilyNote() {
   return <span className="text-[11px] font-medium text-muted-foreground">家庭自行記錄</span>;
+}
+
+// A titled section that shows only its heading until tapped.
+export function Fold({ id, title, icon: Icon, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const hash = useRouterState({ select: (st) => st.location.hash });
+  useEffect(() => {
+    const winHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+    if (id && (hash === id || winHash === id)) {
+      setOpen(true);
+      setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 50);
+    }
+  }, [id, hash]);
+  return (
+    <section id={id} className="scroll-mt-20">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-h-[56px] w-full items-center gap-3 rounded-3xl border border-border bg-card px-4 text-left shadow-[0_6px_20px_-10px_hsl(334_70%_60%/0.35)]"
+      >
+        {Icon ? (
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
+        ) : null}
+        <span className="flex-1 text-[16px] font-bold">{title}</span>
+        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? <div className="mt-2">{children}</div> : null}
+    </section>
+  );
 }

@@ -16,6 +16,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   const toast = async () => (await page.locator("[data-sonner-toast]").allTextContents()).join(" | ");
   const go = async (p) => { await page.goto(BASE + p, { waitUntil: "domcontentloaded" }); await page.waitForTimeout(2500); };
   const R = {}; global.R = R; global.P = page;
+  const fold = async (t) => { const b = page.locator("section > button[aria-expanded]", { hasText: t }).first(); if ((await b.getAttribute("aria-expanded")) === "false") { await b.click(); await page.waitForTimeout(300); } };
   const esc=(t)=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   const L=(root,t)=>root.getByLabel(new RegExp("^"+esc(t)+"\\s*(\\*|選填)?$"));
 
@@ -38,7 +39,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   R.careNotRepeated = await page.getByRole("complementary", { name: "關懷問題" }).count() === 0;
   R.careAnsweredText = await page.getByText("目前沒有這些狀況。").count() > 0;
   // danger sign card shows action
-  R.dangerAction = await page.getByText("出現任何一項：立即就醫。").count() > 0;
+  R.dangerCardTitle = await page.getByText("亮黃燈！懷孕期間的危險徵兆").count() > 0;
 
   // handbook week navigation
   await go("/handbook");
@@ -93,7 +94,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   await page.getByRole("button", { name: "關閉" }).click();
 
   // change EDD (+7 days) keeps booked
-  await go("/me");
+  await go("/me"); await fold("孕期日期");
   await page.getByText("醫師確認的預產期").click();
   const curEdd = addDays(today, 280 - 84);
   await L(page,"預產期").fill(addDays(curEdd, 7));
@@ -105,7 +106,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   R.bookedKept = await page.getByText(/14:00/).count() > 0;
 
   // over 40 weeks
-  await go("/me");
+  await go("/me"); await fold("孕期日期");
   await page.getByText("醫師確認的預產期").click();
   await L(page,"預產期").fill(addDays(today, -9));
   await page.getByRole("button", { name: "更新日期" }).click(); await page.waitForTimeout(1500);
@@ -113,7 +114,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   R.over40 = await page.getByText("孕 41 週 + 2 天").count() > 0 && await page.getByText("已超過 40 週").count() > 0;
   await shot("04-over40");
   // invalid: over 44
-  await go("/me");
+  await go("/me"); await fold("孕期日期");
   await page.getByText("醫師確認的預產期").click();
   await L(page,"預產期").fill(addDays(today, -40));
   await page.getByRole("button", { name: "更新日期" }).click(); await page.waitForTimeout(800);
@@ -151,7 +152,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   R.timelineB = await page.locator("button", { hasText: "疫苗接種" }).count();
 
   // backup → corrupt import → valid import
-  await go("/me");
+  await go("/me"); await fold("備份與還原");
   await L(page,"設定備份密碼").fill("secret123");
   const [bk] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "產生加密備份" }).click()]);
   const bkText = fs.readFileSync(await bk.path(), "utf8"); fs.writeFileSync("backup.sproutbackup", bkText);
@@ -164,7 +165,8 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   const after = await page.evaluate(() => new Promise((res) => { const r = indexedDB.open("sprout-family"); r.onsuccess = () => { const q = r.result.transaction("records").objectStore("records").count(); q.onsuccess = () => res(q.result); }; }));
   R.dataUnchanged = before === after;
   // wipe then restore valid
-  await page.getByRole("button", { name: "刪除全部資料" }).click();
+  await fold("刪除全部資料");
+  await page.locator("button.bg-destructive", { hasText: "刪除全部資料" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "下一步" }).click();
   await L(page,"請輸入「刪除」兩個字").fill("刪除");
   await page.getByRole("button", { name: "永久刪除" }).click(); await page.waitForTimeout(2000);
@@ -174,7 +176,7 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   await L(page,"寶寶暱稱").fill("暫時");
   await L(page,"出生日期").fill(today);
   await page.getByRole("button", { name: "開始使用" }).click(); await page.waitForTimeout(2000);
-  await go("/me");
+  await go("/me"); await fold("備份與還原");
   await page.locator('input[type="file"]').setInputFiles("backup.sproutbackup");
   await L(page,"備份密碼").fill("secret123");
   await page.getByRole("button", { name: "檢查備份內容" }).click(); await page.waitForTimeout(3000);
@@ -184,11 +186,12 @@ const addDays = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x
   R.restored = restored;
 
   // demo load & clear
+  await fold("範例資料");
   await page.getByRole("button", { name: "兩個寶寶範例" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "載入" }).click(); await page.waitForTimeout(2000);
   R.demoBadge = await page.getByText("範例資料").count() > 0;
   await go("/"); await shot("06-demo");
-  await go("/me");
+  await go("/me"); await fold("範例資料");
   await page.getByRole("button", { name: "清除範例資料" }).click(); await page.waitForTimeout(1500);
   R.demoCleared = await page.getByText("我在孕期").count() > 0;
 

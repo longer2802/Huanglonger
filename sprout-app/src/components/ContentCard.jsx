@@ -33,7 +33,7 @@ export function SourceLine({ source, compact = false }) {
 }
 
 export default function ContentCard({ card, subjectId, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen || card.alert);
+  const [open, setOpen] = useState(defaultOpen);
   const { todos } = useSprout();
 
   const add = async (ruleKey) => {
@@ -49,7 +49,10 @@ export default function ContentCard({ card, subjectId, defaultOpen = false }) {
     <Card className={cn(card.alert && "border-destructive/50")}>
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-start justify-between gap-3 text-left">
         <div className="min-w-0">
-          <h3 className="text-[17px] font-bold leading-snug">{card.title}</h3>
+          <h3 className={cn("text-[17px] font-bold leading-snug", card.alert && "text-destructive")}>
+            {card.alert ? "⚠ " : ""}
+            {card.title}
+          </h3>
           <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">{card.summary}</p>
         </div>
         <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />

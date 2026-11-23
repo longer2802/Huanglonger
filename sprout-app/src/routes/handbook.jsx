@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Library } from "lucide-react";
+import { Baby, ChevronLeft, ChevronRight, HeartHandshake, Library } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Btn, Empty } from "@/components/kit";
-import SubjectSwitcher, { useActivePerson } from "@/components/SubjectSwitcher";
+import { useActivePerson } from "@/components/SubjectSwitcher";
+import BabyBook from "@/components/BabyBook";
 import ContentCard from "@/components/ContentCard";
 import { personName } from "@/components/CarePrompt";
 import { useSprout } from "@/lib/store";
 import { todayTW } from "@/lib/dates";
 import { personContext } from "@/lib/stage";
-import { cardsForBabyAge, cardsForPostpartumDay, cardsForPregnancyWeek, MONTH_DAYS } from "@/lib/content";
+import { cardsForPostpartumDay, cardsForPregnancyWeek } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/handbook")({
@@ -28,18 +29,6 @@ const PP_STOPS = [
   { day: 31, label: "產後 1～3 個月" },
   { day: 93, label: "產後 3 個月以後" },
 ];
-const AGE_STOPS = [
-  { day: 0, label: "出生 6 天內" },
-  { day: 14, label: "2 週～2 個月" },
-  { day: MONTH_DAYS(2), label: "2～4 個月" },
-  { day: MONTH_DAYS(4), label: "4～6 個月" },
-  { day: MONTH_DAYS(6), label: "6 個月～1 歲" },
-  { day: MONTH_DAYS(12), label: "1～1 歲半" },
-  { day: MONTH_DAYS(18), label: "1 歲半～2 歲" },
-  { day: MONTH_DAYS(24), label: "2～3 歲" },
-  { day: MONTH_DAYS(36), label: "3～5 歲" },
-  { day: MONTH_DAYS(60), label: "5～7 歲" },
-];
 
 function nearestStop(stops, value) {
   let idx = 0;
@@ -50,20 +39,53 @@ function nearestStop(stops, value) {
 }
 
 function Handbook() {
-  const { family } = useSprout();
-  const person = useActivePerson();
+  const { family, people } = useSprout();
+  const active = useActivePerson();
   const today = todayTW();
-  const ctx = personContext(person, family, today);
+  const mother = people.find((p) => p.role === "mother");
+  const babies = people.filter((p) => p.role === "baby");
+  const [tab, setTab] = useState(active?.role === "baby" ? "baby" : "mom");
+  const [babyId, setBabyId] = useState(active?.role === "baby" ? active.id : babies[0]?.id);
+  const baby = babies.find((b) => b.id === babyId) ?? babies[0] ?? null;
+  const ctx = personContext(mother, family, today);
   return (
     <div className="space-y-4">
-      <SubjectSwitcher />
-      {ctx?.kind === "pregnant" ? <PregnancyWeeks key={person.id} current={ctx.pregWeek} personId={person.id} /> : null}
-      {ctx?.kind === "postpartum" ? <Stops key={person.id} stops={PP_STOPS} current={ctx.ppDay} cardsFor={cardsForPostpartumDay} personId={person.id} title={`${personName(person)}的產後照護`} /> : null}
-      {ctx?.kind === "baby" ? <Stops key={person.id} stops={AGE_STOPS} current={ctx.ageDays} cardsFor={cardsForBabyAge} personId={person.id} title={`${personName(person)}的成長手冊`} /> : null}
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1" role="tablist" aria-label="手冊">
+        {[
+          ["mom", family?.stage === "born" ? "媽媽產後" : "孕期週記", HeartHandshake],
+          ["baby", "寶寶手冊", Baby],
+        ].map(([key, label, Icon]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)} className={cn("flex min-h-[48px] items-center justify-center gap-1.5 rounded-full text-[15px] font-bold", tab === key ? "bg-card text-primary shadow-sm" : "text-muted-foreground")}>
+            <Icon className="h-5 w-5" />
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "mom" ? (
+        <>
+          {ctx?.kind === "pregnant" ? <PregnancyWeeks key="preg" current={ctx.pregWeek} personId={mother.id} /> : null}
+          {ctx?.kind === "postpartum" ? <Stops key="pp" stops={PP_STOPS} current={ctx.ppDay} cardsFor={cardsForPostpartumDay} personId={mother.id} title={`${personName(mother)}的產後照護`} /> : null}
+        </>
+      ) : (
+        <>
+          {babies.length > 1 ? (
+            <div className="-mx-4 overflow-x-auto px-4">
+              <div className="flex w-max gap-2">
+                {babies.map((b) => (
+                  <button key={b.id} type="button" onClick={() => setBabyId(b.id)} className={cn("inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-4 text-[15px] font-semibold", b.id === baby?.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card")}>
+                    <Baby className="h-4 w-4" />
+                    {b.nickname}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <BabyBook key={baby?.id ?? "none"} baby={baby} />
+        </>
+      )}
       <Link to="/sources" className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[15px] font-semibold text-primary">
         <Library className="h-5 w-5" /> 官方資料與版本核對
       </Link>
-      <p className="text-center text-[12px] leading-relaxed text-muted-foreground">只顯示已對照官方原文的內容；尚待確認版次的內容保留為草稿，不會出現在這裡。</p>
     </div>
   );
 }
@@ -101,7 +123,7 @@ function PregnancyWeeks({ current, personId }) {
       </div>
       <div className="space-y-3">
         {cards.map((c) => (
-          <ContentCard key={`${week}-${c.id}`} card={c} subjectId={personId} defaultOpen={c.id.startsWith("preg-visit")} />
+          <ContentCard key={`${week}-${c.id}`} card={c} subjectId={personId} />
         ))}
         {!cards.length ? <Empty title="這週沒有已核對的內容" /> : null}
       </div>

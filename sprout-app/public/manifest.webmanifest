@@ -7,11 +7,26 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FBF7EF",
-  "theme_color": "#4E6B55",
+  "background_color": "#FFF5F8",
+  "theme_color": "#FFE3EE",
   "icons": [
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/51526d716_sprout-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/8dcbe9122_sprout-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/9e48ec7f8_sprout-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/7587cbcdd4990d22938553f3532fc694_sprout-angel-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/2f95c97687cb97b7da8c9cec1342030d_sprout-angel-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/23372fefe70ace2e675c9228b99cb569_sprout-angel-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
