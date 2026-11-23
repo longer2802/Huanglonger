@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { useRouterState } from "@tanstack/react-router";
-import { ChevronDown, ExternalLink, HeartPulse, Phone } from "lucide-react";
+import { ExternalLink, HeartPulse, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { AlertBox, Btn } from "./kit";
-import { saveAnswer, saveRecord, useSprout } from "@/lib/store";
+import { AlertBox, Btn, Sheet } from "./kit";
+import { saveAnswer, saveRecord, updateSettings, useSprout } from "@/lib/store";
 import { nowTimeTW, todayTW } from "@/lib/dates";
 import { personContext } from "@/lib/stage";
-import { answerId } from "@/lib/care";
+import { answerId, moodStage } from "@/lib/care";
 import { sourceOf } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +13,8 @@ export function personName(p) {
   return p?.role === "mother" ? p.nickname || "媽媽" : p?.nickname || "寶寶";
 }
 
-// Check-ins that apply now and have no answer yet ("later" counts as pending).
+// Stage check-ins (danger signs, newborn) that apply now. They are listed on
+// 今天 and never pop up by themselves.
 export function useCareQueue() {
   const { people, family, answers } = useSprout();
   return useMemo(() => {
@@ -28,6 +28,17 @@ export function useCareQueue() {
     }
     return list;
   }, [people, family, answers]);
+}
+
+// Today's mood check for the mother.
+export function useMoodToday() {
+  const { people, answers, settings, family } = useSprout();
+  const today = todayTW();
+  const mother = people.find((p) => p.role === "mother");
+  const stage = moodStage(today);
+  const answer = mother ? answers.find((a) => a.id === answerId(mother.id, stage)) ?? null : null;
+  const pending = !!family && !!mother && (!answer || answer.answer === "later");
+  return { mother, stage, answer, pending, dismissedToday: settings.moodDismissedOn === today, today };
 }
 
 function ClinicContact({ person, mother }) {
@@ -140,54 +151,33 @@ export function CareForm({ person, stage, onDone }) {
         <Btn variant="apricot" disabled={busy} onClick={() => setStep("unsure")}>
           我不確定
         </Btn>
-        <Btn variant="ghost" disabled={busy} onClick={() => finish("later")}>
-          稍後處理
-        </Btn>
       </div>
       <p className="text-[12px] leading-relaxed text-muted-foreground">
-        回答「目前沒有這些狀況」只代表這次沒有觀察到上面的情況，不是健康評估。小芽不做診斷；有疑問請詢問醫療院所。來源：{src?.name}（{src?.edition}）{stage.source.page}。
+        回答「目前沒有這些狀況」只代表這次沒有觀察到上面的情況，不是健康評估。媽媽手冊E版不做診斷；有疑問請詢問醫療院所。來源：{src?.name}（{src?.edition}）{stage.source.page}。
       </p>
     </div>
   );
 }
 
-// Opens by itself once per person and stage, fully on 今天 and folded to one
-// line elsewhere. It sits above the bottom bar without a backdrop and is kept
-// short, so the page (and any care information) stays visible and usable.
-export default function CarePrompt() {
-  const queue = useCareQueue();
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  const [openOn, setOpenOn] = useState(path === "/" ? "/" : null);
-  const folded = openOn !== path;
-  const setFolded = (fn) => setOpenOn(fn(folded) ? null : path);
-  const [hidden, setHidden] = useState([]);
-  const next = queue.find((q) => !q.answer && !hidden.includes(`${q.person.id}:${q.stage.key}`));
-  if (!next) return null;
-  const key = `${next.person.id}:${next.stage.key}`;
-
+// The daily mood pop-up. It opens once a day. Answering records it and closes
+// it; closing without answering tucks it away (a heart dot on 今天 and a row
+// in 待回答關懷) until tomorrow.
+export default function DailyMood() {
+  const { mother, stage, answer, pending, dismissedToday, today } = useMoodToday();
+  const [closed, setClosed] = useState(false);
+  const open = pending && !answer && !dismissedToday && !closed;
+  if (!mother) return null;
+  const close = () => {
+    setClosed(true);
+    updateSettings({ moodDismissedOn: today });
+  };
   return (
-    <>
-    {/* Spacer so the end of the page can scroll clear of the fixed panel. */}
-    <div aria-hidden="true" className={folded ? "h-20" : "h-[48dvh]"} />
-    <aside aria-label="關懷問題" className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] z-30 px-3">
-      <div className="mx-auto max-w-lg rounded-3xl border-2 border-primary/40 bg-card shadow-[0_-8px_30px_rgba(40,60,45,0.18)]">
-        <button type="button" onClick={() => setFolded((v) => !v)} aria-expanded={!folded} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
-          <span className="flex items-center gap-2">
-            <HeartPulse className="h-5 w-5 text-primary" />
-            <span>
-              <span className="block text-[15px] font-bold">{personName(next.person)}：最近有出現以下狀況嗎？</span>
-              <span className="block text-xs text-muted-foreground">{next.stage.title}</span>
-            </span>
-          </span>
-          <ChevronDown className={cn("h-5 w-5 shrink-0 transition-transform", folded ? "rotate-180" : "")} />
-        </button>
-        {!folded ? (
-          <div className="max-h-[42dvh] overflow-y-auto px-4 pb-4">
-            <CareForm person={next.person} stage={next.stage} onDone={() => setHidden((h) => [...h, key])} />
-          </div>
-        ) : null}
+    <Sheet open={open} onClose={close} title={`${personName(mother)}，今天心情好嗎？`}>
+      <div className="mb-3 flex items-center gap-2 rounded-2xl bg-secondary px-3 py-2 text-[14px]">
+        <HeartPulse className="h-5 w-5 shrink-0 text-primary" />
+        <span>每天一次的心情小關懷。不想回答可以先關掉，之後在「今天」也能填。</span>
       </div>
-    </aside>
-    </>
+      <CareForm person={mother} stage={stage} onDone={() => setClosed(true)} />
+    </Sheet>
   );
 }

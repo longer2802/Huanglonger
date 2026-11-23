@@ -5,7 +5,7 @@ import AppShell, { useCounts } from "@/components/AppShell";
 import { Card, Empty, SectionTitle, Sheet } from "@/components/kit";
 import SubjectSwitcher, { useActivePerson } from "@/components/SubjectSwitcher";
 import ContentCard from "@/components/ContentCard";
-import { CareForm, personName, useCareQueue } from "@/components/CarePrompt";
+import { CareForm, personName, useCareQueue, useMoodToday } from "@/components/CarePrompt";
 import { TodoRow, TodoSheet } from "@/components/Todo";
 import { KINDS, QUICK_KINDS, kindsFor } from "@/lib/records";
 import { useSprout } from "@/lib/store";
@@ -17,7 +17,7 @@ import { RecordIcon } from "@/components/RecordIcon";
 
 export const Route = createFileRoute("/")({
   ssr: false,
-  head: () => ({ meta: [{ title: "今天・小芽" }] }),
+  head: () => ({ meta: [{ title: "今天・媽媽手冊E版" }] }),
   component: () => (
     <AppShell>
       <Today />
@@ -32,6 +32,7 @@ function Today() {
   const person = useActivePerson();
   const counts = useCounts();
   const queue = useCareQueue();
+  const mood = useMoodToday();
   const today = todayTW();
   const ctx = personContext(person, family, today);
   const [openTodo, setOpenTodo] = useState(null);
@@ -43,7 +44,10 @@ function Today() {
     .filter(({ s }) => s in ORDER)
     .sort((a, b) => ORDER[a.s] - ORDER[b.s] || String(a.t.bookedDate || a.t.suggestStart).localeCompare(String(b.t.bookedDate || b.t.suggestStart)));
   const next = mine[0]?.t;
-  const pendingCare = queue.filter((q) => !q.answer || q.answer.answer === "later");
+  const pendingCare = [
+    ...(mood.pending ? [{ person: mood.mother, stage: mood.stage, answer: mood.answer }] : []),
+    ...queue.filter((q) => !q.answer || q.answer.answer === "later"),
+  ];
   const answeredCare = queue.filter((q) => q.answer && q.answer.answer !== "later");
   const cards = ctx?.cards ?? [];
   const quick = kindsFor(person).filter((k) => QUICK_KINDS.includes(k.key) || ["prenatal", "postpartum", "visit"].includes(k.key)).slice(0, 6);
@@ -94,7 +98,7 @@ function Today() {
                 <HeartPulse className="h-6 w-6 shrink-0 text-primary" />
                 <span className="flex-1">
                   <span className="block text-[15px] font-bold">{personName(q.person)}：{q.stage.title}</span>
-                  <span className="block text-[13px] text-muted-foreground">{q.answer ? "稍後處理中，還沒回答" : "最近有出現以下狀況嗎？"}</span>
+                  <span className="block text-[13px] text-muted-foreground">{q.stage.key.startsWith("mood-") ? "點這裡填寫今天的心情" : "最近有出現以下狀況嗎？"}</span>
                 </span>
                 <ArrowRight className="h-5 w-5 text-muted-foreground" />
               </button>
@@ -133,7 +137,7 @@ function Today() {
       <p className="pb-2 text-center text-[12px] leading-relaxed text-muted-foreground">所有紀錄皆為家庭自行記錄。衛教摘要自官方手冊、未經醫療專業審閱；身體不適請詢問醫療院所。</p>
 
       {openTodo ? <TodoSheet todo={openTodo} onClose={() => setOpenTodo(null)} /> : null}
-      <Sheet open={!!careOpen} onClose={() => setCareOpen(null)} title={careOpen ? `${personName(careOpen.person)}：最近有出現以下狀況嗎？` : ""} tall>
+      <Sheet open={!!careOpen} onClose={() => setCareOpen(null)} title={careOpen ? (careOpen.stage.key.startsWith("mood-") ? `${personName(careOpen.person)}，今天心情好嗎？` : `${personName(careOpen.person)}：最近有出現以下狀況嗎？`) : ""} tall>
         {careOpen ? <CareForm person={careOpen.person} stage={careOpen.stage} onDone={() => setCareOpen(null)} /> : null}
       </Sheet>
     </div>

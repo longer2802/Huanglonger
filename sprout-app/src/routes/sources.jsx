@@ -8,7 +8,7 @@ import { RULES } from "@/lib/rules";
 
 export const Route = createFileRoute("/sources")({
   ssr: false,
-  head: () => ({ meta: [{ title: "官方資料核對・小芽" }] }),
+  head: () => ({ meta: [{ title: "官方資料核對・媽媽手冊E版" }] }),
   component: () => (
     <AppShell allowWithoutFamily>
       <SourcesPage />
@@ -25,7 +25,7 @@ function SourcesPage() {
       </Link>
       <h1 className="text-xl font-extrabold">官方資料與版本核對</h1>
       <p className="text-[14px] leading-relaxed text-muted-foreground">
-        內容資料版本 {CONTENT_VERSION}。每張衛教卡都是小芽自行摘要，保留來源名稱、章節頁碼與版本；尚未經醫療專業審閱，公開版本僅供展示測試。
+        內容資料版本 {CONTENT_VERSION}。每張衛教卡都是媽媽手冊E版自行摘要，保留來源名稱、章節頁碼與版本；尚未經醫療專業審閱，公開版本僅供展示測試。
       </p>
       <section className="space-y-3">
         <SectionTitle>來源版本</SectionTitle>

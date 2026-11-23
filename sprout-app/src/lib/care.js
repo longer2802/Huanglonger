@@ -39,20 +39,6 @@ export const CARE_STAGES = [
     source: { id: "hpa-mom-2026-06", page: "第 13 頁" },
   },
   {
-    key: "pp-mood",
-    version: 1,
-    role: "mother",
-    when: { phase: "pp", fromDay: 0, toDay: 92 },
-    title: "產後心情關懷",
-    items: [
-      "過去一個月，常被情緒低落、憂鬱或對未來焦慮所困擾",
-      "過去一個月，因對事物失去興趣或無法專心而困擾",
-    ],
-    action: "手冊建議：任一項為「是」，再用「愛丁堡產後憂鬱量表」自我篩檢，並可和產後健康照護的醫護人員討論。",
-    urgent: false,
-    source: { id: "hpa-mom-2026-06", page: "第 31 頁（心情溫度計）、第 18 頁" },
-  },
-  {
     key: "baby-newborn",
     version: 1,
     role: "baby",
@@ -67,6 +53,26 @@ export const CARE_STAGES = [
     source: { id: "hpa-child-2026-06", page: "第 20～22 頁" },
   },
 ];
+
+// Daily mood check for the mother, from the handbook's 心情溫度計. It pops up
+// once a day; each day's answer is stored under its own date.
+export const MOOD_DAILY = {
+  key: "mood",
+  version: 1,
+  role: "mother",
+  title: "今日心情關懷",
+  items: [
+    "過去一個月，常被情緒低落、憂鬱或對未來焦慮所困擾",
+    "過去一個月，因對事物失去興趣或無法專心而困擾",
+  ],
+  action: "手冊建議：任一項為「是」，再用「愛丁堡產後憂鬱量表」自我篩檢，並可和產檢或產後照護的醫護人員聊聊。",
+  urgent: false,
+  source: { id: "hpa-mom-2026-06", page: "第 31 頁（心情溫度計）" },
+};
+
+export function moodStage(date) {
+  return { ...MOOD_DAILY, key: `mood-${date}` };
+}
 
 // The stage that applies right now for one person, or null.
 export function currentCareStage(person, ctx) {

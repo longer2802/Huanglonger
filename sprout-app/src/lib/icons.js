@@ -1,3 +1,3 @@
-export const ICON_192 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/7587cbcdd4990d22938553f3532fc694_sprout-angel-192.png";
-export const ICON_180 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/ecb15e151133dbef717b53f13fdf1d04_sprout-angel-180.png";
-export const ICON_512 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/2f95c97687cb97b7da8c9cec1342030d_sprout-angel-512.png";
+export const ICON_192 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/d243b2f32f43c9cc80e08098f72397c7_mhb-hands-192.png";
+export const ICON_180 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/b9aa1edb3ed4ee5f720b90cf0dc6a85a_mhb-hands-180.png";
+export const ICON_512 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/a7b145848ac1e65f2e51fd3b81fcb66c_mhb-hands-512.png";

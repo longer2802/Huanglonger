@@ -24,7 +24,7 @@ import { demoBorn, demoPregnancy } from "@/lib/demo";
 
 export const Route = createFileRoute("/me")({
   ssr: false,
-  head: () => ({ meta: [{ title: "我的・小芽" }] }),
+  head: () => ({ meta: [{ title: "我的・媽媽手冊E版" }] }),
   component: () => (
     <AppShell>
       <MePage />
@@ -91,7 +91,7 @@ function MePage() {
         <Library className="h-5 w-5" /> 官方資料與版本核對
       </Link>
       <p className="pb-4 text-center text-[12px] leading-relaxed text-muted-foreground">
-        小芽不收集身分證字號、健保卡號或與照護無關的資料。資料只存在這支手機的瀏覽器，不上傳、不做分析追蹤。
+        媽媽手冊E版不收集身分證字號、健保卡號或與照護無關的資料。資料只存在這支手機的瀏覽器，不上傳、不做分析追蹤。
       </p>
 
       {editPerson ? <PersonSheet person={editPerson} onClose={() => setEditPerson(null)} /> : null}
@@ -361,7 +361,7 @@ function BackupSection() {
         <p className="rounded-2xl bg-accent px-3 py-2 text-[14px] font-semibold leading-relaxed text-accent-foreground">
           ⚠ 資料只存在這支手機的瀏覽器。換手機、清除瀏覽器資料或移除主畫面圖示前，請先備份。
         </p>
-        <Field label="設定備份密碼" required hint="至少 6 個字。忘記密碼就無法還原，小芽也無法幫忙找回。">
+        <Field label="設定備份密碼" required hint="至少 6 個字。忘記密碼就無法還原，媽媽手冊E版也無法幫忙找回。">
           {(id) => <input id={id} type="password" autoComplete="new-password" className={inputClass} value={pw} onChange={(e) => setPw(e.target.value)} />}
         </Field>
         <Btn className="w-full" disabled={busy || pw.length < 6} onClick={doBackup}>
@@ -467,7 +467,7 @@ function DangerZone() {
   return (
     <Fold title="刪除全部資料" icon={Trash2}>
       <Card className="space-y-3 border-destructive/40">
-        <p className="text-sm text-muted-foreground">刪除這支手機上小芽的所有家人、紀錄、待辦與回答。已匯出到手機行事曆的事件不會被刪除。</p>
+        <p className="text-sm text-muted-foreground">刪除這支手機上媽媽手冊E版的所有家人、紀錄、待辦與回答。已匯出到手機行事曆的事件不會被刪除。</p>
         <Btn variant="danger" className="w-full" onClick={() => setStep(1)}>
           <Trash2 className="h-5 w-5" /> 刪除全部資料
         </Btn>

@@ -36,7 +36,7 @@ export function openDb() {
         resolve(db);
       };
       req.onerror = () => reject(req.error || new Error("本機資料庫開啟失敗"));
-      req.onblocked = () => reject(new Error("請關閉其他開著小芽的分頁後再試"));
+      req.onblocked = () => reject(new Error("請關閉其他開著媽媽手冊E版的分頁後再試"));
     }).catch((e) => {
       dbPromise = null;
       throw e;

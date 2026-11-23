@@ -64,7 +64,7 @@ export function buildIcs(todo, when, opts = {}) {
   if (!isValidDate(when?.date) || !isValidTime(when?.time)) throw new Error("請先選擇實際的日期與時間。");
   const end = plusMinutes(when.date, when.time, durationMin);
   const summary = detail ? `${NEUTRAL_TITLE}：${todo.title}` : NEUTRAL_TITLE;
-  const description = detail ? `${todo.title}\n由小芽匯出，改期請在小芽內修改後重新匯出。` : "請開啟小芽查看詳情。改期請在小芽內修改後重新匯出。";
+  const description = detail ? `${todo.title}\n由媽媽手冊E版匯出，改期請在媽媽手冊E版內修改後重新匯出。` : "請開啟媽媽手冊E版查看詳情。改期請在媽媽手冊E版內修改後重新匯出。";
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

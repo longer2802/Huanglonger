@@ -17,7 +17,7 @@ const str = (v) => (typeof v === "string" && v.length < 80 ? v : undefined);
 export const Route = createFileRoute("/record")({
   ssr: false,
   validateSearch: (s) => ({ tab: s.tab === "timeline" ? "timeline" : undefined, kind: str(s.kind), subject: str(s.subject), id: str(s.id) }),
-  head: () => ({ meta: [{ title: "記錄・小芽" }] }),
+  head: () => ({ meta: [{ title: "記錄・媽媽手冊E版" }] }),
   component: () => (
     <AppShell>
       <RecordPage />

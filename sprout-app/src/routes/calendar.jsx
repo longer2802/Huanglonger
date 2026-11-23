@@ -13,7 +13,7 @@ import { todoState } from "@/lib/rules";
 
 export const Route = createFileRoute("/calendar")({
   ssr: false,
-  head: () => ({ meta: [{ title: "行事曆・小芽" }] }),
+  head: () => ({ meta: [{ title: "行事曆・媽媽手冊E版" }] }),
   component: () => (
     <AppShell>
       <CalendarPage />

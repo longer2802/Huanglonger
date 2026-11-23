@@ -20,7 +20,7 @@ export function demoPregnancy(today = todayTW()) {
     deliveryDate: null,
     createdAt: new Date().toISOString(),
   };
-  const mother = { id: "mother", role: "mother", nickname: "小芽媽（範例）", clinic: "範例婦產科診所", clinicPhone: "", createdAt: "2026-01-01" };
+  const mother = { id: "mother", role: "mother", nickname: "範例媽媽", clinic: "範例婦產科診所", clinicPhone: "", createdAt: "2026-01-01" };
   const records = [
     rec("demo-r1", "mother", "prenatal", today, { clinic: "範例婦產科診所", weight: "55.2", bpSys: "112", bpDia: "70", tests: "例行檢查、血液常規", doctorNotes: "（範例）下次回診帶健康手冊", questions: "（範例）可以吃哪些營養補充品？" }, "10:00"),
   ];
@@ -31,7 +31,7 @@ export function demoPregnancy(today = todayTW()) {
 export function demoBorn(today = todayTW()) {
   const delivery = addDays(today, -75);
   const family = { key: "family", stage: "born", demo: true, pregnancy: null, edd: null, handbookDate: null, startedOn: addDays(today, -75), deliveryDate: delivery, createdAt: new Date().toISOString() };
-  const mother = { id: "mother", role: "mother", nickname: "小芽媽（範例）", clinic: "範例婦產科診所", clinicPhone: "", createdAt: "2026-01-01" };
+  const mother = { id: "mother", role: "mother", nickname: "範例媽媽", clinic: "範例婦產科診所", clinicPhone: "", createdAt: "2026-01-01" };
   const bean = { id: "baby-demo-bean", role: "baby", nickname: "小豆（範例）", birthDate: delivery, birthTime: "08:30", gestWeeks: "39", birthWeight: "3.1", birthLength: "50", birthHead: "34", clinic: "範例小兒科", clinicPhone: "", allergies: "", note: "", createdAt: "2026-01-02" };
   const millet = { id: "baby-demo-millet", role: "baby", nickname: "小米（範例）", birthDate: addMonths(today, -14), birthTime: "", gestWeeks: "38", birthWeight: "2.9", birthLength: "49", birthHead: "33", clinic: "範例小兒科", clinicPhone: "", allergies: "（範例）無已知過敏", note: "", createdAt: "2026-01-01" };
   const people = [mother, millet, bean];

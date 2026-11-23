@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/handbook")({
   ssr: false,
-  head: () => ({ meta: [{ title: "手冊・小芽" }] }),
+  head: () => ({ meta: [{ title: "手冊・媽媽手冊E版" }] }),
   component: () => (
     <AppShell>
       <Handbook />

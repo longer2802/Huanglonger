@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 小芽 · 粉紅泡泡 + 天使寶寶. Mostly pink, with only a whisper of lilac and
+/* 媽媽手冊E版 · 粉紅泡泡 + 天使寶寶. Mostly pink, with only a whisper of lilac and
    baby blue. Warnings stay a deep red with a ⚠ symbol and words. */
 @layer base {
   :root {
@@ -174,4 +174,23 @@ nav[aria-label="主選單"] {
   .page-turn-prev {
     animation: none;
   }
+}
+
+/* Visible pink scrollbars wherever the browser allows (Android, desktop).
+   iPhone Safari always uses its own overlay scrollbar. */
+html {
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(336 66% 74%) hsl(345 100% 96%);
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(345 100% 96%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(336 66% 76%);
+  border-radius: 8px;
 }

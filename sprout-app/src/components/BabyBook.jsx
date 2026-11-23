@@ -155,7 +155,7 @@ export default function BabyBook({ baby }) {
         return (
           <div className="flex min-h-[56vh] flex-col items-center justify-center gap-3 text-center">
             <AngelBaby className="h-32 w-32" />
-            <p className="text-[13px] font-bold tracking-[0.3em] text-primary/80">小芽</p>
+            <p className="text-[13px] font-bold tracking-[0.3em] text-primary/80">媽媽手冊E版</p>
             <h1 className="text-[28px] font-extrabold text-primary">寶寶健康手冊</h1>
             {baby ? (
               <div className="mt-2 w-full max-w-[260px] space-y-1 rounded-2xl bg-white/80 px-4 py-3 text-left text-[14px]">
@@ -304,7 +304,7 @@ export default function BabyBook({ baby }) {
               <SourceLine source={{ id: "hpa-child-2026-06", section: "兒童健康手冊", page: "" }} />
               <SourceLine source={{ id: "cdc-vax-11509", section: "兒童預防接種時程", page: "" }} />
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">本手冊為小芽依官方資料整理的電子版，不取代實體兒童健康手冊；就醫時請攜帶實體手冊。</p>
+            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">本手冊為媽媽手冊E版依官方資料整理的電子版，不取代實體兒童健康手冊；就醫時請攜帶實體手冊。</p>
           </>
         );
       default: {

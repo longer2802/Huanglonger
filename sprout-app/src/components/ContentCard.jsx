@@ -21,7 +21,7 @@ export function SourceLine({ source, compact = false }) {
         <>
           <p>版本：{s.edition}</p>
           <p>
-            審核狀態：{s.status === "verified" ? "已對照官方原文" : "待確認"}；內容為小芽自行摘要，未經醫療專業審閱。
+            審核狀態：{s.status === "verified" ? "已對照官方原文" : "待確認"}；內容為媽媽手冊E版自行摘要，未經醫療專業審閱。
           </p>
           <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-flex items-center gap-1 font-semibold text-primary underline">
             開啟官方原文 <ExternalLink className="h-3.5 w-3.5" />

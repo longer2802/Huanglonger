@@ -94,7 +94,7 @@ export function TodoSheet({ todo, onClose }) {
       setExportedMsg(
         cancelledExported
           ? "已匯出「取消」檔。部分行事曆 App 不會自動刪除，請到手機行事曆確認舊事件已移除。"
-          : "已匯出。小芽無法確認手機是否已加入，請打開手機行事曆確認事件與提醒時間。",
+          : "已匯出。媽媽手冊E版無法確認手機是否已加入，請打開手機行事曆確認事件與提醒時間。",
       );
     } catch (e) {
       toast.error(e.message || "匯出失敗");

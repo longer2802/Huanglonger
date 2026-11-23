@@ -5,13 +5,15 @@ import { reload, useSprout } from "@/lib/store";
 import { todayTW } from "@/lib/dates";
 import { todoState } from "@/lib/rules";
 import { personContext } from "@/lib/stage";
-import { answerId } from "@/lib/care";
+import { answerId, moodStage } from "@/lib/care";
 import { cn } from "@/lib/utils";
 import { ICON_192 } from "@/lib/icons";
 import Onboarding from "./Onboarding";
-import CarePrompt from "./CarePrompt";
+import DailyMood from "./CarePrompt";
 
 let started = false;
+
+export const APP_NAME = "媽媽手冊E版";
 
 export function useCounts() {
   const { todos, people, family, answers } = useSprout();
@@ -34,7 +36,10 @@ export function useCounts() {
       const a = answers.find((x) => x.id === answerId(p.id, ctx.care));
       if (!a || a.answer === "later") care += 1;
     }
-    return { overdue, soon, confirm, care, attention: overdue + confirm + care };
+    const mother = people.find((p) => p.role === "mother");
+    const mood = mother ? answers.find((x) => x.id === answerId(mother.id, moodStage(today))) : null;
+    const moodPending = !!mother && (!mood || mood.answer === "later");
+    return { overdue, soon, confirm, care: care + (moodPending ? 1 : 0), moodPending, attention: overdue + confirm };
   }, [todos, people, family, answers]);
 }
 
@@ -45,19 +50,19 @@ function todayPlus(today, n) {
 }
 
 const NAV = [
-  { to: "/", label: "今天", icon: Home },
+  { to: "/", label: "今天", icon: Home, heart: true },
   { to: "/handbook", label: "手冊", icon: BookOpen },
   { to: "/record", label: "記錄", icon: Plus, center: true },
   { to: "/calendar", label: "行事曆", icon: CalendarDays, badge: true },
   { to: "/me", label: "我的", icon: UserRound },
 ];
 
-function BottomNav({ attention }) {
+function BottomNav({ attention, carePending }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav aria-label="主選單" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur">
       <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {NAV.map(({ to, label, icon: Icon, center, badge }) => {
+        {NAV.map(({ to, label, icon: Icon, center, badge, heart }) => {
           const active = to === "/" ? path === "/" : path.startsWith(to);
           return (
             <li key={to}>
@@ -73,6 +78,11 @@ function BottomNav({ attention }) {
                 {badge && attention > 0 ? (
                   <span className="absolute right-[22%] top-2 min-w-[20px] rounded-full bg-destructive px-1 text-center text-[11px] font-bold leading-5 text-destructive-foreground" aria-label={`${attention} 項需要處理`}>
                     {attention}
+                  </span>
+                ) : null}
+                {heart && carePending ? (
+                  <span className="absolute right-[26%] top-2 text-[14px] leading-none text-primary" aria-label="今天的心情關懷還沒填">
+                    ♥
                   </span>
                 ) : null}
               </Link>
@@ -97,7 +107,7 @@ function useAppBadge(count) {
 export default function AppShell({ children, allowWithoutFamily = false }) {
   const s = useSprout();
   const counts = useCounts();
-  useAppBadge(s.family ? counts.attention : 0);
+  useAppBadge(s.family ? counts.attention + counts.care : 0);
 
   useEffect(() => {
     if (!started) {
@@ -123,13 +133,13 @@ export default function AppShell({ children, allowWithoutFamily = false }) {
   if (!s.family && !allowWithoutFamily) return <Onboarding />;
 
   return (
-    <div className="min-h-dvh bg-background pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
+    <div className="min-h-dvh bg-background pb-[calc(env(safe-area-inset-bottom,0px)+96px)]">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <img src={ICON_192} alt="" className="h-9 w-9 rounded-xl" />
+            <img src={ICON_192} alt="" className="h-10 w-10 rounded-xl" />
             <div>
-              <p className="text-lg font-extrabold leading-tight text-primary">小芽</p>
+              <p className="text-lg font-extrabold leading-tight text-primary">{APP_NAME}</p>
               <p className="text-[11px] leading-tight text-muted-foreground">從第一次產檢，到寶寶的每一個第一次</p>
             </div>
           </div>
@@ -141,8 +151,8 @@ export default function AppShell({ children, allowWithoutFamily = false }) {
         </div>
       </header>
       <main className="mx-auto max-w-lg px-4 pt-3">{children}</main>
-      {s.family ? <CarePrompt /> : null}
-      {s.family ? <BottomNav attention={counts.attention} /> : null}
+      {s.family ? <DailyMood /> : null}
+      {s.family ? <BottomNav attention={counts.attention} carePending={counts.moodPending} /> : null}
     </div>
   );
 }

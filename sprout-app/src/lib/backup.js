@@ -74,11 +74,11 @@ export async function readBackup(text, password) {
   try {
     file = JSON.parse(text);
   } catch {
-    fail("這不是小芽的備份檔，或檔案已損壞。");
+    fail("這不是媽媽手冊E版的備份檔，或檔案已損壞。");
   }
-  if (!file || file.format !== BACKUP_FORMAT) fail("這不是小芽的備份檔。");
+  if (!file || file.format !== BACKUP_FORMAT) fail("這不是媽媽手冊E版的備份檔。");
   if (file.formatVersion !== BACKUP_FORMAT_VERSION) fail(`備份檔格式版本 ${file.formatVersion} 不支援，請更新 App 後再試。`);
-  if (!Number.isInteger(file.dbVersion) || file.dbVersion > DB_VERSION) fail("這個備份來自較新版本的小芽，請先更新 App。");
+  if (!Number.isInteger(file.dbVersion) || file.dbVersion > DB_VERSION) fail("這個備份來自較新版本的媽媽手冊E版，請先更新 App。");
   if (!file.kdf?.salt || !file.cipher?.iv || typeof file.data !== "string" || !file.checksum) fail("備份檔內容不完整。");
 
   let payload;

@@ -83,7 +83,7 @@ export default function RecordForm({ kind, subjectId, existing, onSaved, onCance
           </Field>
         ))}
       {kind === "vaccine" ? <p className="text-[13px] leading-relaxed text-muted-foreground">同一位家人、同一品項的同一劑只能登記一次，避免重複。預約請到「行事曆」。</p> : null}
-      {kind === "prenatal" || kind === "visit" ? <p className="text-[13px] leading-relaxed text-muted-foreground">請照報告與醫囑原文抄寫；小芽不解讀數值，也不調整用藥。</p> : null}
+      {kind === "prenatal" || kind === "visit" ? <p className="text-[13px] leading-relaxed text-muted-foreground">請照報告與醫囑原文抄寫；媽媽手冊E版不解讀數值，也不調整用藥。</p> : null}
       {errors.length ? (
         <ul role="alert" className="space-y-1 rounded-2xl border-2 border-destructive bg-[hsl(var(--alert-bg))] px-3 py-2 text-[14px] font-semibold text-[hsl(var(--alert-fg))]">
           {errors.map((e) => (
