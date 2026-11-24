@@ -10,8 +10,8 @@
   "background_color": "#FFF5F9",
   "theme_color": "#FFE3EE",
   "icons": [
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/eab84f8af0c500c9fe8bf9de50655722_mhb-angel-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/37a670c434202d934c49f18926e3aeb4_mhb-angel-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/c05f604f646eb0d5c47a50227429299c_mhb-angel-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/2875327d9d2e1f9140793e9a43a2db5e_mhb-cloud-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/1ac5e7f223e4e6d25404c00507dfe665_mhb-cloud-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/1c989c6d4dd929fbb686e68d691edb69_mhb-cloud-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

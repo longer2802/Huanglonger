@@ -1,3 +1,3 @@
-export const ICON_192 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/eab84f8af0c500c9fe8bf9de50655722_mhb-angel-192.png";
-export const ICON_180 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/085f8ce306f6b274130cb2a707d46f85_mhb-angel-180.png";
-export const ICON_512 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/37a670c434202d934c49f18926e3aeb4_mhb-angel-512.png";
+export const ICON_192 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/2875327d9d2e1f9140793e9a43a2db5e_mhb-cloud-192.png";
+export const ICON_180 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/1261c7c8d94cf8c6aa1d8c16ab4fb238_mhb-cloud-180.png";
+export const ICON_512 = "https://media.base44.com/images/public/6b03d4092f1493715a7d2e40/1ac5e7f223e4e6d25404c00507dfe665_mhb-cloud-512.png";
