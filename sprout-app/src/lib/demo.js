@@ -32,13 +32,19 @@ export function demoBorn(today = todayTW()) {
   const delivery = addDays(today, -75);
   const family = { key: "family", stage: "born", demo: true, pregnancy: null, edd: null, handbookDate: null, startedOn: addDays(today, -75), deliveryDate: delivery, createdAt: new Date().toISOString() };
   const mother = { id: "mother", role: "mother", nickname: "範例媽媽", clinic: "範例婦產科診所", clinicPhone: "", createdAt: "2026-01-01" };
-  const bean = { id: "baby-demo-bean", role: "baby", nickname: "小豆（範例）", birthDate: delivery, birthTime: "08:30", gestWeeks: "39", birthWeight: "3.1", birthLength: "50", birthHead: "34", clinic: "範例小兒科", clinicPhone: "", allergies: "", note: "", createdAt: "2026-01-02" };
-  const millet = { id: "baby-demo-millet", role: "baby", nickname: "小米（範例）", birthDate: addMonths(today, -14), birthTime: "", gestWeeks: "38", birthWeight: "2.9", birthLength: "49", birthHead: "33", clinic: "範例小兒科", clinicPhone: "", allergies: "（範例）無已知過敏", note: "", createdAt: "2026-01-01" };
+  const bean = { id: "baby-demo-bean", role: "baby", nickname: "小豆（範例）", sex: "boy", birthDate: delivery, birthTime: "08:30", gestWeeks: "39", birthWeight: "3.1", birthLength: "50", birthHead: "34", clinic: "範例小兒科", clinicPhone: "", allergies: "", note: "", createdAt: "2026-01-02" };
+  const millet = { id: "baby-demo-millet", role: "baby", nickname: "小米（範例）", sex: "girl", birthDate: addMonths(today, -14), birthTime: "", gestWeeks: "38", birthWeight: "2.9", birthLength: "49", birthHead: "33", clinic: "範例小兒科", clinicPhone: "", allergies: "（範例）無已知過敏", note: "", createdAt: "2026-01-01" };
   const people = [mother, millet, bean];
   const records = [
     rec("demo-b1", bean.id, "vaccine", delivery, { vaccineCode: "hepb", dose: "1", clinic: "範例醫院", observation: "（範例）無明顯不適" }),
     rec("demo-b2", bean.id, "vaccine", addMonths(delivery, 1), { vaccineCode: "hepb", dose: "2", clinic: "範例小兒科" }),
     rec("demo-b3", bean.id, "growth", addMonths(delivery, 1), { length: "54.5", weight: "4.3", head: "37" }),
+    rec("demo-b6", bean.id, "growth", addMonths(delivery, 2), { length: "58.2", weight: "5.5", head: "39" }),
+    rec("demo-g1", millet.id, "growth", addMonths(millet.birthDate, 2), { length: "56.8", weight: "5.0", head: "38.1" }),
+    rec("demo-g2", millet.id, "growth", addMonths(millet.birthDate, 4), { length: "61.9", weight: "6.3", head: "40.5" }),
+    rec("demo-g3", millet.id, "growth", addMonths(millet.birthDate, 6), { length: "65.5", weight: "7.2", head: "42.0" }),
+    rec("demo-g4", millet.id, "growth", addMonths(millet.birthDate, 9), { length: "70.0", weight: "8.1", head: "43.7" }),
+    rec("demo-g5", millet.id, "growth", addMonths(millet.birthDate, 12), { length: "73.8", weight: "8.8", head: "44.8" }),
     rec("demo-b4", bean.id, "feeding", today, { method: "瓶餵母乳", amount: "120" }, "07:30"),
     rec("demo-b5", bean.id, "diaper", today, { type: "便便", stoolColor: "8", texture: "糊狀" }, "09:10"),
     rec("demo-m1", millet.id, "vaccine", addMonths(millet.birthDate, 12), { vaccineCode: "mmr", dose: "1", clinic: "範例小兒科" }),

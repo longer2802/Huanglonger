@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, ListOrdered } from "lucide-react";
 import { AlertBox } from "./kit";
 import { AngelBaby } from "./Cute";
 import ContentCard, { SourceLine } from "./ContentCard";
 import { TodoSheet } from "./Todo";
+import GrowthChart from "./GrowthChart";
 import { useSprout } from "@/lib/store";
 import { ageParts, formatAge, formatDate, todayTW } from "@/lib/dates";
 import { RULES, ruleWindow, todoId, todoState } from "@/lib/rules";
@@ -122,7 +122,6 @@ export default function BabyBook({ baby }) {
   const dev = RULES.filter((r) => r.key.startsWith("devscreen-"));
   const newborn = RULES.filter((r) => r.key.startsWith("screen-") && !r.key.startsWith("screen-stool"));
   const stoolRules = RULES.filter((r) => r.key.startsWith("screen-stool"));
-  const growth = baby ? records.filter((r) => r.subjectId === baby.id && r.kind === "growth").slice().sort((a, b) => a.date.localeCompare(b.date)) : [];
   const lastStool = baby ? records.find((r) => r.subjectId === baby.id && r.kind === "diaper" && r.fields?.stoolColor) : null;
 
   const pages = useMemo(() => {
@@ -134,7 +133,7 @@ export default function BabyBook({ baby }) {
       { key: "dev", title: "兒童發展篩檢服務" },
       { key: "newborn", title: "新生兒篩檢紀錄" },
       { key: "stool", title: "嬰兒黃金九色卡" },
-      { key: "growth", title: "生長紀錄" },
+      { key: "growth", title: "生長曲線與紀錄" },
       ...STAGES.map(([day, label]) => ({ key: `stage-${day}`, title: `${label}衛教`, day, label })),
       { key: "back", title: "資料來源" },
     ];
@@ -263,37 +262,8 @@ export default function BabyBook({ baby }) {
       case "growth":
         return (
           <>
-            <PageHead title="生長紀錄" sub="家庭自行記錄；數值不做解讀，請與醫師討論。" />
-            {growth.length ? (
-              <table className="w-full border-collapse text-[13px]">
-                <thead>
-                  <tr className="bg-secondary/70">
-                    {["日期", "身長 cm", "體重 kg", "頭圍 cm"].map((h) => (
-                      <th key={h} className="border border-border px-2 py-1.5">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {growth.map((r) => (
-                    <tr key={r.id} className="text-center">
-                      <td className="border border-border px-2 py-1.5">{formatDate(r.date)}</td>
-                      <td className="border border-border px-2 py-1.5">{r.fields.length || "—"}</td>
-                      <td className="border border-border px-2 py-1.5">{r.fields.weight || "—"}</td>
-                      <td className="border border-border px-2 py-1.5">{r.fields.head || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="rounded-2xl bg-white/70 px-3 py-4 text-center text-[14px] text-muted-foreground">還沒有生長紀錄</p>
-            )}
-            {baby ? (
-              <Link to="/record" search={{ kind: "growth", subject: baby.id }} className="mt-3 flex min-h-[48px] items-center justify-center rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground">
-                ＋ 記錄身長體重頭圍
-              </Link>
-            ) : null}
+            <PageHead title="生長曲線與紀錄" sub="依手冊「兒童生長曲線百分位圖」，看寶寶落在第幾百分位。" />
+            {baby ? <GrowthChart baby={baby} /> : <p className="rounded-2xl bg-white/70 px-3 py-4 text-center text-[14px] text-muted-foreground">寶寶出生後就能記錄身長、體重、頭圍並畫出生長曲線。</p>}
           </>
         );
       case "back":

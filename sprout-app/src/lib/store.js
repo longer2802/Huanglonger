@@ -146,6 +146,7 @@ function newBaby(baby) {
     id: uid("baby"),
     role: "baby",
     nickname: baby.nickname.trim(),
+    sex: baby.sex === "boy" || baby.sex === "girl" ? baby.sex : "",
     birthDate: baby.birthDate,
     birthTime: baby.birthTime || "",
     gestWeeks: baby.gestWeeks ?? "",

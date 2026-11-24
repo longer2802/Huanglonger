@@ -89,6 +89,20 @@ export function BabyForm({ value, onChange, full = true }) {
       <Field label="寶寶暱稱" required hint="小名就好，不需要真實姓名。">
         {(id) => <input id={id} className={inputClass} maxLength={20} value={value.nickname || ""} onChange={(e) => set({ nickname: e.target.value })} />}
       </Field>
+      <Field label="性別" hint="手冊的生長曲線分男孩版和女孩版，用來畫出正確的曲線。">
+        {(id) => (
+          <div id={id} role="radiogroup" className="grid grid-cols-2 gap-2">
+            {[
+              ["boy", "男孩"],
+              ["girl", "女孩"],
+            ].map(([v, label]) => (
+              <button key={v} type="button" role="radio" aria-checked={value.sex === v} onClick={() => set({ sex: v })} className={cn("min-h-[48px] rounded-2xl border text-[16px] font-bold", value.sex === v ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground")}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="出生日期" required>
           {(id) => <input id={id} type="date" max={today} className={inputClass} value={value.birthDate || ""} onChange={(e) => set({ birthDate: e.target.value })} />}
