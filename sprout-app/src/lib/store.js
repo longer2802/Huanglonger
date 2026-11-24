@@ -85,10 +85,19 @@ async function replan(family, people, extraKeys = []) {
 
 // ---------- Family set-up ----------
 
+// Real data replaces the example family completely: nothing from the demo
+// (records, to-dos, answers, reminder settings) is carried over.
+async function clearDemo() {
+  if (!state.family?.demo) return;
+  await db.clearAll();
+  state = { ...state, family: null, settings: { ...EMPTY.settings }, people: [], records: [], todos: [], answers: [] };
+}
+
 export async function startPregnancy({ pregnancy, handbookDate, motherName, clinic, clinicPhone }) {
   const today = todayTW();
   const errors = validatePregnancy(pregnancy, today);
   if (errors.length) throw new Error(errors.join("\n"));
+  await clearDemo();
   const family = {
     key: "family",
     stage: "pregnant",
@@ -106,13 +115,14 @@ export async function startPregnancy({ pregnancy, handbookDate, motherName, clin
   await reload();
 }
 
-export async function startBorn({ baby, deliveryDate, motherName }) {
+export async function startBorn({ baby, deliveryDate, motherName, clinic, clinicPhone }) {
   const today = todayTW();
   const errors = validateBaby(baby, today);
   if (!isValidDate(deliveryDate)) errors.push("請填寫有效的生產日期。");
   if (errors.length) throw new Error(errors.join("\n"));
+  await clearDemo();
   const family = { key: "family", stage: "born", pregnancy: null, edd: null, handbookDate: null, startedOn: today, deliveryDate, createdAt: nowIso() };
-  const mother = { id: "mother", role: "mother", nickname: motherName?.trim() || "媽媽", clinic: "", clinicPhone: "", createdAt: nowIso() };
+  const mother = { id: "mother", role: "mother", nickname: motherName?.trim() || "媽媽", clinic: clinic || "", clinicPhone: clinicPhone || "", createdAt: nowIso() };
   const b = newBaby(baby);
   await db.write({ put: { meta: [family], people: [mother, b] } });
   state = { ...state, todos: [] };

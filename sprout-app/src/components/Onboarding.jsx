@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Baby, FlaskConical, HeartHandshake, ShieldCheck } from "lucide-react";
+import { Baby, FlaskConical, HeartHandshake, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, Field, inputClass } from "./kit";
 import { BabyForm, PregnancyForm } from "./Forms";
-import { getState, replaceEverything, startBorn, startPregnancy, updatePerson } from "@/lib/store";
+import { replaceEverything, startBorn, startPregnancy } from "@/lib/store";
 import { todayTW } from "@/lib/dates";
 import { demoBorn, demoPregnancy } from "@/lib/demo";
 import { ICON_192 } from "@/lib/icons";
@@ -28,9 +28,16 @@ function MotherFields({ value, onChange }) {
   );
 }
 
+// The "please fill in your own details" pop-up over example data shows once
+// per app open. Choosing an example on the first screen counts as having seen
+// it, so the example opens without the form popping straight back up.
+export const demoPrompt = { closed: false };
+
 // First visit: a welcome pop-up that collects the mother's (and baby's) basic
-// information before anything else.
-export default function Onboarding() {
+// information before anything else. While the phone only holds example data
+// it pops up over the app every time it opens (asPopup), until real basic
+// information is saved.
+export default function Onboarding({ asPopup = false, onClose }) {
   const today = todayTW();
   const [mode, setMode] = useState(null);
   const [mom, setMom] = useState({ name: "", clinic: "", phone: "" });
@@ -54,14 +61,20 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-dvh bg-background px-4 pb-10 pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
-      <div className="fixed inset-0 bg-[hsl(336_60%_40%/0.12)]" aria-hidden="true" />
+    <div className={asPopup ? "fixed inset-0 z-[90] overflow-y-auto bg-[hsl(336_60%_30%/0.45)] px-4 pb-10 pt-[calc(env(safe-area-inset-top,0px)+1rem)]" : "min-h-dvh bg-background px-4 pb-10 pt-[calc(env(safe-area-inset-top,0px)+1rem)]"}>
+      {asPopup ? null : <div className="fixed inset-0 bg-[hsl(336_60%_40%/0.12)]" aria-hidden="true" />}
       <div role="dialog" aria-modal="true" aria-label="歡迎使用媽媽手冊E版" className="relative mx-auto max-w-lg space-y-5 rounded-[32px] border border-border bg-card/95 p-5 shadow-[0_20px_50px_-20px_hsl(336_75%_55%/0.5)] backdrop-blur">
+        {asPopup ? (
+          <button type="button" onClick={onClose} aria-label="先看範例" className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-secondary">
+            <X className="h-5 w-5" />
+          </button>
+        ) : null}
         <div className="flex flex-col items-center gap-2 text-center">
           <img src={ICON_192} alt="" className="h-20 w-20 rounded-3xl shadow-sm" />
           <h1 className="text-[26px] font-extrabold text-primary">媽媽手冊E版</h1>
           <p className="text-[15px] text-muted-foreground">從第一次產檢，到寶寶的每一個第一次</p>
           <p className="rounded-full bg-secondary px-4 py-1.5 text-[14px] font-semibold text-secondary-foreground">歡迎！先花一分鐘填寫基本資料</p>
+          {asPopup ? <p className="text-[13px] leading-relaxed text-muted-foreground">目前看到的是範例資料。填好自己的基本資料後，範例會清除，這個視窗也不會再跳出。</p> : null}
         </div>
 
         {!mode ? (
@@ -86,19 +99,25 @@ export default function Onboarding() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               免登入，資料只存在這支手機。不需要身分證字號或健保卡號。
             </p>
+            {asPopup ? (
+              <Btn variant="ghost" className="w-full" onClick={onClose}>
+                先繼續看範例
+              </Btn>
+            ) : (
             <div className="space-y-2 rounded-3xl border border-dashed border-border p-3">
               <p className="flex items-center gap-1.5 text-[14px] font-bold">
                 <FlaskConical className="h-4 w-4 text-primary" /> 只是想先看看？
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <Btn size="md" variant="outline" disabled={busy} onClick={() => run(() => replaceEverything(demoPregnancy()))}>
+                <Btn size="md" variant="outline" disabled={busy} onClick={() => run(() => { demoPrompt.closed = true; return replaceEverything(demoPregnancy()); })}>
                   孕期範例
                 </Btn>
-                <Btn size="md" variant="outline" disabled={busy} onClick={() => run(() => replaceEverything(demoBorn()))}>
+                <Btn size="md" variant="outline" disabled={busy} onClick={() => run(() => { demoPrompt.closed = true; return replaceEverything(demoBorn()); })}>
                   兩個寶寶範例
                 </Btn>
               </div>
             </div>
+            )}
             <p className="text-center text-[12px] leading-relaxed text-muted-foreground">展示測試版：衛教內容摘要自官方手冊，尚未經醫療專業審閱。</p>
           </>
         ) : null}
@@ -143,11 +162,7 @@ export default function Onboarding() {
               <Btn
                 disabled={busy}
                 onClick={() =>
-                  run(async () => {
-                    await startBorn({ baby, deliveryDate: delivery || baby.birthDate, motherName: mom.name });
-                    const m = getState().people.find((p) => p.role === "mother");
-                    if (m && (mom.clinic || mom.phone)) await updatePerson({ ...m, clinic: mom.clinic, clinicPhone: mom.phone });
-                  })
+                  run(() => startBorn({ baby, deliveryDate: delivery || baby.birthDate, motherName: mom.name, clinic: mom.clinic, clinicPhone: mom.phone }))
                 }
               >
                 開始使用

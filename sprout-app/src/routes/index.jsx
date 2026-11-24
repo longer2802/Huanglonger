@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Baby, HeartPulse, Sparkles } from "lucide-react";
+import { ArrowRight, Baby, CalendarClock, HeartPulse, Sparkles } from "lucide-react";
 import AppShell, { useCounts } from "@/components/AppShell";
 import { Card, Empty, SectionTitle, Sheet } from "@/components/kit";
 import SubjectSwitcher, { useActivePerson } from "@/components/SubjectSwitcher";
@@ -9,9 +9,9 @@ import { CareForm, personName, useCareQueue, useMoodToday } from "@/components/C
 import { TodoRow, TodoSheet } from "@/components/Todo";
 import { KINDS, QUICK_KINDS, kindsFor } from "@/lib/records";
 import { useSprout } from "@/lib/store";
-import { todayTW } from "@/lib/dates";
+import { formatDate, todayTW } from "@/lib/dates";
 import { personContext } from "@/lib/stage";
-import { todoState } from "@/lib/rules";
+import { nowAndNext } from "@/lib/reminders";
 import { ANSWER_LABEL } from "@/lib/care";
 import { RecordIcon } from "@/components/RecordIcon";
 
@@ -25,8 +25,6 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-const ORDER = { overdue: 0, confirm: 1, booked: 2, soon: 3, later: 4 };
-
 function Today() {
   const { family, todos } = useSprout();
   const person = useActivePerson();
@@ -38,12 +36,10 @@ function Today() {
   const [openTodo, setOpenTodo] = useState(null);
   const [careOpen, setCareOpen] = useState(null);
 
-  const mine = todos
-    .filter((t) => t.subjectId === person?.id)
-    .map((t) => ({ t, s: todoState(t, today) }))
-    .filter(({ s }) => s in ORDER)
-    .sort((a, b) => ORDER[a.s] - ORDER[b.s] || String(a.t.bookedDate || a.t.suggestStart).localeCompare(String(b.t.bookedDate || b.t.suggestStart)));
-  const next = mine[0]?.t;
+  const plan = nowAndNext(
+    todos.filter((t) => t.subjectId === person?.id),
+    today,
+  );
   const pendingCare = [
     ...(mood.pending ? [{ person: mood.mother, stage: mood.stage, answer: mood.answer }] : []),
     ...queue.filter((q) => !q.answer || q.answer.answer === "later"),
@@ -85,8 +81,36 @@ function Today() {
       </Card>
 
       <section>
-        <SectionTitle action={<Link to="/calendar" className="text-sm font-semibold text-primary">行事曆 →</Link>}>下一件待辦</SectionTitle>
-        {next ? <TodoRow todo={next} onOpen={setOpenTodo} showPerson={false} /> : <Empty title="目前沒有待辦">可以從衛教卡片或行事曆新增。</Empty>}
+        <SectionTitle action={<Link to="/calendar" className="text-sm font-semibold text-primary">行事曆 →</Link>}>本次需完成</SectionTitle>
+        {plan.now.length ? (
+          <div className="space-y-2">
+            {plan.now.slice(0, 4).map(({ todo }) => (
+              <TodoRow key={todo.id} todo={todo} onOpen={setOpenTodo} showPerson={false} />
+            ))}
+            {plan.now.length > 4 ? (
+              <Link to="/calendar" className="block rounded-2xl bg-card px-3.5 py-2.5 text-center text-[14px] font-semibold text-primary">
+                還有 {plan.now.length - 4} 項，到行事曆查看 →
+              </Link>
+            ) : null}
+          </div>
+        ) : (
+          <p className="rounded-2xl bg-card px-3.5 py-3 text-[14px] text-muted-foreground">今天沒有需要完成的事項。</p>
+        )}
+      </section>
+
+      <section>
+        <SectionTitle>下次需完成</SectionTitle>
+        {plan.next ? (
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-[14px] font-semibold text-primary">
+              <CalendarClock className="h-4 w-4" /> {formatDate(plan.next.todo.status === "booked" ? plan.next.todo.bookedDate : plan.next.todo.suggestStart, { weekday: true })}・還有 {plan.next.left} 天
+            </p>
+            <TodoRow todo={plan.next.todo} onOpen={setOpenTodo} showPerson={false} />
+            <p className="text-[12px] leading-relaxed text-muted-foreground">日期前一週與前一天會跳出提醒；日期過了會再問你是否已完成。</p>
+          </div>
+        ) : (
+          <Empty title="目前沒有排定的下一件事">可以從衛教卡片或行事曆新增。</Empty>
+        )}
       </section>
 
       <section>

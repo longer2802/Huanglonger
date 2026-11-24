@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { BookOpen, CalendarDays, FlaskConical, Home, Loader2, Plus, UserRound } from "lucide-react";
 import { reload, useSprout } from "@/lib/store";
@@ -8,8 +8,9 @@ import { personContext } from "@/lib/stage";
 import { answerId, moodStage } from "@/lib/care";
 import { cn } from "@/lib/utils";
 import { ICON_192 } from "@/lib/icons";
-import Onboarding from "./Onboarding";
-import DailyMood from "./CarePrompt";
+import Onboarding, { demoPrompt } from "./Onboarding";
+import DailyMood, { useMoodToday } from "./CarePrompt";
+import Reminders from "./Reminders";
 
 let started = false;
 
@@ -107,6 +108,9 @@ function useAppBadge(count) {
 export default function AppShell({ children, allowWithoutFamily = false }) {
   const s = useSprout();
   const counts = useCounts();
+  const mood = useMoodToday();
+  const [, bump] = useState(0);
+  const showDemoPrompt = !!s.family?.demo && !demoPrompt.closed;
   useAppBadge(s.family ? counts.attention + counts.care : 0);
 
   useEffect(() => {
@@ -144,14 +148,31 @@ export default function AppShell({ children, allowWithoutFamily = false }) {
             </div>
           </div>
           {s.family?.demo ? (
-            <Link to="/me" className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground">
-              <FlaskConical className="h-3.5 w-3.5" /> 範例資料
-            </Link>
+            <button type="button" onClick={() => {
+              demoPrompt.closed = false;
+              bump((n) => n + 1);
+            }} className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground">
+              <FlaskConical className="h-3.5 w-3.5" /> 範例・填我的資料
+            </button>
           ) : null}
         </div>
       </header>
       <main className="mx-auto max-w-lg px-4 pt-3">{children}</main>
-      {s.family ? <DailyMood /> : null}
+      {/* One pop-up at a time: basic details (example data only) → today's mood → date reminders. */}
+      {showDemoPrompt ? (
+        <Onboarding
+          asPopup
+          onClose={() => {
+            demoPrompt.closed = true;
+            bump((n) => n + 1);
+          }}
+        />
+      ) : s.family ? (
+        <>
+          <DailyMood />
+          {mood.pending && !mood.answer && !mood.dismissedToday ? null : <Reminders />}
+        </>
+      ) : null}
       {s.family ? <BottomNav attention={counts.attention} carePending={counts.moodPending} /> : null}
     </div>
   );

@@ -84,7 +84,7 @@ function MePage() {
       <ReminderSettings />
       <InstallGuide />
       <BackupSection />
-      <DemoSection />
+      {family.demo ? <DemoSection /> : null}
       <DangerZone />
 
       <Link to="/sources" className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[15px] font-semibold text-primary">
