@@ -5,6 +5,7 @@
 // - 行內規格：「M35 / L45」「35/45」
 // - 加料：「珍珠 +10」
 // - 左右並排的多個表格、深色底、色塊標題
+// 注意：正規表示式中的冒號寫成 \u003a，避免 Tailwind 把「[x:y]」誤當成 CSS class
 
 export interface OcrSegment {
   text: string;
@@ -66,7 +67,7 @@ interface PriceTok {
 /** 從一段文字裡找出所有價格（含「M35」「中杯30」「+10」「35/45」） */
 function priceTokens(text: string): { tokens: PriceTok[]; rest: string } {
   const t = half(text);
-  const re = new RegExp(`(\\+)?\\s*(${SIZE_PREFIX})?\\s*[:：]?\\s*[$]?\\s*(\\d{2,4})\\s*(?:元|圓)?`, "gi");
+  const re = new RegExp(`(\\+)?\\s*(${SIZE_PREFIX})?\\s*(?:\\u003a|：)?\\s*[$]?\\s*(\\d{2,4})\\s*(?:元|圓)?`, "gi");
   const tokens: PriceTok[] = [];
   let rest = "";
   let last = 0;
@@ -76,7 +77,7 @@ function priceTokens(text: string): { tokens: PriceTok[]; rest: string } {
     if (!(n >= 5 && n <= 5000)) continue;
     // 電話、時間這類數字不是價格
     const around = t.slice(Math.max(0, m.index - 1), m.index + m[0].length + 1);
-    if (/[\d][-:~]|[-:~][\d]/.test(around)) continue;
+    if (/\d(?:-|\u003a|~)|(?:-|\u003a|~)\d/.test(around)) continue;
     tokens.push({ value: n, label: m[2] ?? "", plus: Boolean(m[1]), at: (m.index + m[0].length / 2) / Math.max(1, t.length) });
     rest += t.slice(last, m.index) + " ";
     last = m.index + m[0].length;
@@ -136,7 +137,7 @@ export function layoutMenuText(segments: OcrSegment[]): string {
 
     // 規格表頭：整段都是規格字（「中杯 大杯」「M L」「冰 熱」）；OCR 常把「中杯」拆成「中 杯」，先把中文字接起來
     const words = text
-      .replace(/[|｜「」『』:：.,，。'"`’”_\-]+/g, " ")
+      .replace(/[|｜「」『』\u003a：.,，。'"`’”_\-]+/g, " ")
       .replace(new RegExp(`([${CJK_CLASS}]) (?=[${CJK_CLASS}])`, "g"), "$1")
       .replace(/(中|大|小|特大)(杯)/g, "$1$2")
       .split(/\s+/)
@@ -166,7 +167,7 @@ export function layoutMenuText(segments: OcrSegment[]): string {
 
     // 加料列：「加料：珍珠 +10 椰果 +10」
     if (tokens.some((tk) => tk.plus)) {
-      const body = half(seg.text).replace(/\s+/g, "").replace(/^[^:：]*加料[^:：]*[:：]/, "");
+      const body = half(seg.text).replace(/\s+/g, "").replace(/^[^\u003a：]*加料[^\u003a：]*(?:\u003a|：)/, "");
       const re = new RegExp(`([${CJK_CLASS}]{1,6})[^${CJK_CLASS}\\d+]*\\+\\s*(\\d{1,3})`, "g");
       let m: RegExpExecArray | null;
       let found = false;
@@ -181,7 +182,7 @@ export function layoutMenuText(segments: OcrSegment[]): string {
     const nCjk = cjkCount(cn);
     if (nCjk < 2) continue; // 英文副標、圖片雜訊
     // 中文字要佔這段大部分非空白字元，避免把英文行裡零星誤認的中文當品名
-    const nonSpace = rest.replace(/[\s\d$+/:：.]+/g, "").length;
+    const nonSpace = rest.replace(/[\s\d$+/\u003a：.]+/g, "").length;
     if (nCjk / Math.max(1, nonSpace) < 0.45) continue;
     if (seg.conf < 40) continue;
     // 括號開頭的是附註（例如「(使用某某肉)」），不是品名

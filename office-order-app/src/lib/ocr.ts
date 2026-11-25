@@ -284,7 +284,7 @@ type Blocks = Parameters<typeof segmentsFromBlocks>[0];
 function looksNumeric(seg: OcrSegment): boolean {
   const t = seg.text.replace(/\s+/g, "");
   if (!t || t.length > 10 || /[\u3400-\u9fff]/.test(t)) return false;
-  if (!/^[0-9A-Za-z?$/+.:-]+$/.test(t)) return false;
+  if (!/^[0-9A-Za-z?$/+.\u003a-]+$/.test(t)) return false;
   return /\d/.test(t) || (t.length >= 2 && t.length <= 4);
 }
 
