@@ -20,6 +20,7 @@
 }
 
 * { box-sizing: border-box; }
+html { scroll-padding-bottom: calc(110px + env(safe-area-inset-bottom)); scroll-padding-top: 12px; }
 body { margin: 0; background: var(--bg); min-height: 100dvh; }
 button, input, select, textarea { font: inherit; color: inherit; }
 h1, h2, h3, p { margin: 0; }
@@ -202,3 +203,10 @@ label.field > span { display: block; font-size: 13px; font-weight: 600; color: v
 .only-desktop { display: none; }
 @media (min-width: 900px) { .only-desktop { display: block; } table.only-desktop { display: table; } .hide-desktop { display: none !important; } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* 窄螢幕：已點明細的品名獨佔一行，數量、金額、按鈕放第二行 */
+@media (max-width: 600px) {
+  .line-row { flex-wrap: wrap; align-items: center; }
+  .line-row > .grow { flex-basis: 100%; }
+  .line-row > .money { margin-left: auto; padding-top: 0 !important; }
+}

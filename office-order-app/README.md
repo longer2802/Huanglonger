@@ -40,6 +40,14 @@ npm run preview    # 在本機預覽 dist/，http://localhost:4173
 
 這些檔案都跟網站放在一起，不從 CDN 下載。首頁不會載入任何 OCR 檔案；要等使用者按下「辨識」才會載入。
 
+## Base44 線上版
+
+同一份程式碼也部署在 Base44：https://app-a724fd09.base44.app
+
+- 部署時只用 Base44 的程式碼寫入 API 和部署 API，沒有使用 AI 建置額度。
+- 原始碼放在 Base44 專案的 `src/office/`，由 `src/routes/index.jsx` 以 `ssr: false` 只在瀏覽器載入。
+- OCR 字庫由 `vite.config.js` 裡同一個 `ocr-lang` 外掛輸出到網站的 `/ocr-lang/`，同樣是同站提供。
+
 ## 使用流程
 
 1. **訂單與菜單**
