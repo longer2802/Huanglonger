@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 數位森林｜嵌入範例</title>
+<style>
+  :root { --green:#2F6B4F; --bg:#F4F6F1; --text:#1C2B23; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; }
+  header { background:var(--green); color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:18px; }
+  .download { background:#fff; color:var(--green); text-decoration:none; font-weight:700; padding:10px 16px; border-radius:12px; }
+  main { max-width:1040px; margin:0 auto; padding:16px; }
+  /* App 嵌在平台頁面裡，不跳轉；高度會依 App 內容自動調整 */
+  .app-frame { width:100%; height:900px; border:0; border-radius:20px; background:#fff; display:block; }
+  p.hint { font-size:14px; color:#555; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌳 AI 數位森林 ・ 損益平衡點試算</h1>
+  <a class="download" href="breakeven.html" download="breakeven.html">⬇ 下載 App（HTML）</a>
+</header>
+<main>
+  <p class="hint">App 直接在平台裡操作；按右上角可下載到平板或電腦離線使用。</p>
+  <iframe class="app-frame" id="app" src="breakeven.html" title="損益平衡點試算" scrolling="no"></iframe>
+</main>
+<script>
+  // App 會回報自己的內容高度，平台把 iframe 調成一樣高，就不會出現兩層捲軸
+  window.addEventListener("message", (e) => {
+    const d = e.data;
+    if (d && d.type === "ai-forest-app-height" && d.app === "breakeven") {
+      document.getElementById("app").style.height = Math.ceil(d.height) + "px";
+    }
+  });
+</script>
+</body>
+</html>

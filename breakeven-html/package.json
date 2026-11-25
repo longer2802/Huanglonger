@@ -1,0 +1,10 @@
+{
+  "name": "breakeven-html",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/icons.cjs",
+    "build": "node scripts/build.mjs"
+  }
+}

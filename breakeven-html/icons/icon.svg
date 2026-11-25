@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3F8F68"/>
+      <stop offset="1" stop-color="#1F4F39"/>
+    </linearGradient>
+    <linearGradient id="up" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- 虧損區（淡紅）與獲利區（淡綠） -->
+  <path d="M96 400 L256 256 L96 256 Z" fill="#F28B6B" opacity=".5"/>
+  <path d="M256 256 L416 112 L416 256 Z" fill="#9BE3B8" opacity=".35"/>
+  <!-- 打平線 -->
+  <line x1="80" y1="256" x2="432" y2="256" stroke="#FFFFFF" stroke-width="14" stroke-dasharray="26 20" stroke-linecap="round" opacity=".75"/>
+  <!-- 營業額上升線 -->
+  <path d="M96 400 L416 112" stroke="url(#up)" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <path d="M368 108 L420 108 L420 160" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 損益平衡點 -->
+  <circle cx="256" cy="256" r="44" fill="#F5C443" stroke="#FFFFFF" stroke-width="14"/>
+</svg>
