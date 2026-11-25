@@ -34,3 +34,9 @@ AI 數位森林平台上的商業小工具。輸入固定成本與毛利率，�
 npm run icons   # 改了 icons/icon.svg 才需要（需要 Playwright）
 npm run build   # 產出 release/breakeven.html
 ```
+
+## 已上架（Base44）
+- 網址：https://app-0d6e7919.base44.app （免登入、允許嵌入其他網站）
+- Base44 App ID：`6b06855cb8eef5080d6e7919`，頁面檔案為 `public/index.html`
+- Base44 版的圖示改用媒體庫網址：https://media.base44.com/images/public/6b06855cb8eef5080d6e7919/a7322f2cad473a317492f3e61bdc6d29_breakeven-icon-512.png
+- 嵌入平台：`<iframe src="https://app-0d6e7919.base44.app" ...>`，自動高度的寫法同上
