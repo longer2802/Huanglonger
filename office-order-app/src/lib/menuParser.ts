@@ -11,6 +11,7 @@ export const FLAG = {
   fuzzy: "模糊數字",
   pairing: "配對不明",
   sizes: "規格名稱待確認",
+  lowConf: "辨識信心低",
 } as const;
 
 const SIZE_WORDS = ["特大杯", "大杯", "中杯", "小杯", "特大", "大", "中", "小", "XL", "L", "M", "S", "冰", "熱", "溫", "單點", "套餐", "瓶", "罐"];
@@ -96,7 +97,18 @@ export function parseMenuText(text: string, kind: Kind): ParseResult {
 
   const lines = text.split(/\r?\n/).map(normalizeLine).filter((l) => l.length > 0);
 
-  for (const line of lines) {
+  // 照片辨識時信心不足的行，行尾帶「 ??」記號；那一行產生的品項標「待確認：辨識信心低」
+  let pendingLow = -1;
+  const flushLow = () => {
+    if (pendingLow < 0) return;
+    for (let i = pendingLow; i < items.length; i++) if (!items[i].flags.includes(FLAG.lowConf)) items[i].flags.push(FLAG.lowConf);
+    pendingLow = -1;
+  };
+  for (const rawLine of lines) {
+    flushLow();
+    const lowConf = /\s\?\?$/.test(rawLine);
+    const line = lowConf ? rawLine.replace(/\s\?\?$/, "") : rawLine;
+    if (lowConf) pendingLow = items.length;
     if (NOISE_RE.test(line)) {
       skipped.push(line);
       continue;
@@ -200,6 +212,7 @@ export function parseMenuText(text: string, kind: Kind): ParseResult {
     }
   }
 
+  flushLow();
   pairColumns(items);
   for (const it of items) {
     if (it.variants.some((v) => v.price === null) && !it.flags.includes(FLAG.missing)) it.flags.push(FLAG.missing);

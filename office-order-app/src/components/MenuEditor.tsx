@@ -97,14 +97,16 @@ function VendorPanel({ kind, order, update }: StepProps & { kind: Kind }) {
     try {
       const { recognizeImage } = await import("../lib/ocr");
       const texts: string[] = [];
+      const raws: string[] = [];
       for (let i = 0; i < photoIds.length; i++) {
         const photo = await getPhoto(photoIds[i]);
         if (!photo) continue;
-        const text = await recognizeImage(photo.blob, (p) => setOcr({ stage: p.stage, progress: p.progress, index: i, total: photoIds.length }));
-        texts.push(text);
+        const r = await recognizeImage(photo.blob, (p) => setOcr({ stage: p.stage, progress: p.progress, index: i, total: photoIds.length }));
+        texts.push(r.text);
+        raws.push(r.raw);
       }
-      const rawText = texts.join("\n");
-      const parsed = parseMenuText(rawText, kind);
+      const parsed = parseMenuText(texts.join("\n"), kind);
+      const rawText = `【整理後：只留中文品名與價格】\n${texts.join("\n")}\n\n【辨識引擎原文】\n${raws.join("\n")}`;
       if (!parsed.items.length && !parsed.addons.length) {
         setOcrError("照片裡沒有辨識出品項。可以換一張更清楚、正面拍攝的照片，或改用「貼上文字」「手動新增」。");
       }

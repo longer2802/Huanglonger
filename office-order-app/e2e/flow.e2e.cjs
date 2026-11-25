@@ -21,10 +21,9 @@ const assert = (c, m) => { if (!c) throw new Error('ASSERT: ' + m); log('  ✓',
   await p.getByRole('button', { name: '辨識', exact: true }).click();
   const dlg = p.getByRole('dialog', { name: '校對餐點候選清單' });
   await dlg.waitFor({ timeout: 120000 });
-  // 校對：刪掉店名、修正分類
-  await dlg.getByRole('button', { name: '刪除幸福便當' }).click();
-  const cats = dlg.getByPlaceholder('分類');
-  for (let i = 0; i < 5; i++) await cats.nth(i).fill('便當類');
+  // 校對：店名、電話不會進入候選清單；分類照原圖
+  assert(await dlg.getByRole('button', { name: '刪除幸福便當' }).count() === 0, '店名不會被當成品項');
+  assert((await dlg.getByPlaceholder('分類').first().inputValue()) === '便當類', '分類讀到「便當類」');
   await p.screenshot({ path: OUT + 'm-proofread.png' });
   await dlg.getByRole('button', { name: '套用到菜單' }).click();
   const meal = p.getByRole('region', { name: '餐點菜單' });

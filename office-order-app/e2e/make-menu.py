@@ -29,3 +29,35 @@ for _ in range(60000):
     px[x, yy] = (max(0, min(255, r+n)), max(0, min(255, g+n)), max(0, min(255, b+n)))
 img.save("e2e/fixtures/menu-bento.jpg", quality=85)
 print("ok", img.size)
+
+# 第二張：深色底、金色字、三欄、每個品項下面有英文副標（海報式菜單，內容虛構）
+W2, H2 = 1300, 1500
+img2 = Image.new("RGB", (W2, H2), (28, 30, 34))
+d2 = ImageDraw.Draw(img2)
+gold = (214, 182, 112)
+title = ImageFont.truetype(FONT, 110)
+name_f = ImageFont.truetype(FONT, 46)
+en_f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18) if __import__("os").path.exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf") else ImageFont.truetype(FONT, 18)
+price_f = ImageFont.truetype(FONT, 44)
+d2.text((W2 // 2, 120), "好運便當", font=title, fill=gold, anchor="mm")
+d2.text((W2 // 2, 230), "LUCKY BENTO", font=ImageFont.truetype(FONT, 40), fill=gold, anchor="mm")
+cols = [
+    [("招牌排骨便當", "Signature Pork Chop", "105"), ("香酥雞排便當", "Crispy Chicken Cutlet", "110"), ("紅燒牛腩便當", "Braised Beef Brisket", "135")],
+    [("蔥爆豬肉便當", "Scallion Pork", "100"), ("三杯雞便當", "Three Cup Chicken", "115")],
+    [("鹽烤鯖魚便當", "Grilled Mackerel", "125"), ("素食蔬菜便當", "Vegetarian Bento", "90")],
+]
+for ci, col in enumerate(cols):
+    x = 230 + ci * 420
+    y = 380
+    for name, en, price in col:
+        d2.text((x, y), name, font=name_f, fill=gold, anchor="mm")
+        d2.text((x, y + 46), en, font=en_f, fill=(190, 170, 130), anchor="mm")
+        d2.text((x, y + 100), price, font=price_f, fill=(240, 230, 210), anchor="mm")
+        y += 220
+    if ci < 2:
+        d2.line([(x + 210, 340), (x + 210, 1050)], fill=gold, width=2)
+d2.ellipse([(880, 1100), (1240, 1440)], fill=(170, 110, 60))  # 假裝是食物照片
+d2.text((80, 1380), "營業時間 11:00~14:00　電話 02-0000-0000", font=ImageFont.truetype(FONT, 34), fill=gold)
+img2 = img2.filter(ImageFilter.GaussianBlur(0.6))
+img2.save("e2e/fixtures/menu-poster-dark.jpg", quality=82)
+print("ok poster")
