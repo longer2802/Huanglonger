@@ -45,6 +45,25 @@ const BASE = process.env.BASE || 'http://localhost:4173/';
   const ok = names.length === 7 && names.every((n) => /便當$/.test(n) && !/[A-Za-z]/.test(n)) && prices.every((v) => /^\d{2,3}$/.test(v));
   console.log(ok ? 'POSTER OK：7 個中文品名、每個都有價格、沒有英文與店名' : 'POSTER FAIL');
   await p.screenshot({ path: 'shots/ocr-poster.png' });
+
+  // 飲料單三種版型：品名都要讀到，而且每個品項都有兩個規格的價格
+  await p.getByRole('button', { name: '取消' }).click();
+  await p.getByRole('button', { name: '刪除照片' }).click();
+  await p.getByRole('checkbox', { name: '訂飲料' }).check();
+  const drinks = [['drink-table-light.jpg', 9, 3], ['drink-dark-two-tables.jpg', 8, 0], ['drink-inline-sizes.jpg', 4, 0]];
+  for (const [file, expectItems, expectAddons] of drinks) {
+    await p.getByLabel('上傳飲料菜單照片').setInputFiles('e2e/fixtures/' + file);
+    await p.getByRole('region', { name: '飲料菜單' }).getByRole('button', { name: '辨識', exact: true }).click();
+    const dd = p.getByRole('dialog', { name: '校對飲料候選清單' });
+    await dd.waitFor({ timeout: 180000 });
+    const items = await dd.locator('[data-testid=menu-item]').evaluateAll((els) => els.map((el) => ({ name: el.querySelector('input[placeholder="品名"]').value, prices: [...el.querySelectorAll('.price-input input')].map((i) => i.value) })));
+    const addons = await dd.getByPlaceholder('加料名稱').evaluateAll((els) => els.map((e) => e.value));
+    const ok = items.length === expectItems && items.every((i) => i.prices.length === 2 && i.prices.every((v) => /^\d{2,3}$/.test(v))) && addons.length === expectAddons;
+    console.log(`${file}: ${items.map((i) => `${i.name} ${i.prices.join('/')}`).join('、')}${addons.length ? `｜加料 ${addons.join('、')}` : ''}`);
+    console.log(ok ? `DRINK OK ${file}` : `DRINK FAIL ${file}`);
+    await dd.getByRole('button', { name: '取消' }).click();
+    await p.getByRole('region', { name: '飲料菜單' }).getByRole('button', { name: '刪除照片' }).click();
+  }
   console.log('errors', errs);
   await b.close();
 })().catch((e) => { console.error(e); process.exit(1); });

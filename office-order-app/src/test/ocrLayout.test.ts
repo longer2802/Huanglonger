@@ -82,3 +82,59 @@ describe("工具函式", () => {
     expect(priceOf("02-2345")).toBeNull();
   });
 });
+
+describe("飲料單版型", () => {
+  it("表格式：表頭「中杯 大杯」、每列兩個價格、加料列", () => {
+    const t = layoutMenuText([
+      seg("中 杯 大 杯 |", 1100, 324, 1602, 430, 72),
+      seg("茉莉 綠茶", 132, 479, 366, 566, 90),
+      seg("30", 1116, 479, 1182, 522),
+      seg("35", 1370, 476, 1436, 518),
+      seg("珍珠 奶茶", 139, 1056, 374, 1117, 90),
+      seg("50", 1124, 1052, 1190, 1095),
+      seg("60", 1377, 1049, 1444, 1091),
+      seg("加 料 : 珍珠 +10 椰 果 +10 布丁 +15", 173, 2224, 1266, 2308, 88),
+      seg("甜 度 冰 塊 可 調整 ‧ 熱 飲 另 加 5 元", 173, 2353, 920, 2408, 90),
+    ]);
+    const r = parseMenuText(t, "drink");
+    expect(r.items.map((i) => [i.name, i.variants.map((v) => `${v.label}${v.price}`).join(" ")])).toEqual([
+      ["茉莉綠茶", "中杯30 大杯35"],
+      ["珍珠奶茶", "中杯50 大杯60"],
+    ]);
+    expect(r.items[0].flags).not.toContain(FLAG.sizes);
+    expect(r.addons.map((a) => [a.name, a.price])).toEqual([
+      ["珍珠", 10],
+      ["椰果", 10],
+      ["布丁", 15],
+    ]);
+  });
+
+  it("左右並排兩個表格：價格不會跨到另一個表格", () => {
+    const t = layoutMenuText([
+      seg("M", 700, 300, 730, 340), seg("L", 900, 300, 930, 340),
+      seg("M", 1800, 300, 1830, 340), seg("L", 2000, 300, 2030, 340),
+      seg("多多 綠茶", 100, 400, 400, 460), seg("45", 690, 405, 750, 455), seg("55", 890, 405, 950, 455),
+      // 右邊表格的品名沒讀到，價格不可以被左邊品名收走
+      seg("55", 1790, 405, 1850, 455), seg("65", 1990, 405, 2050, 455),
+      seg("鮮榨 柳橙", 100, 520, 400, 580), seg("60", 690, 525, 750, 575), seg("700", 890, 525, 950, 575, 70),
+    ]);
+    const r = parseMenuText(t, "drink");
+    expect(r.items.map((i) => [i.name, i.variants.map((v) => `${v.label}${v.price}`).join(" ")])).toEqual([
+      ["多多綠茶", "M45 L55"],
+      ["鮮榨柳橙", "M60 L70"],
+    ]);
+    expect(r.items[1].flags).toContain(FLAG.lowConf);
+  });
+
+  it("行內規格「M35 / L45」與「50/60」", () => {
+    const t = layoutMenuText([
+      seg("黃金 烏龍", 200, 430, 650, 580), seg("M35 / L45", 1750, 460, 2290, 560),
+      seg("紅茶 拿 鐵", 200, 1044, 650, 1158), seg("50/60", 1970, 1058, 2298, 1161),
+    ]);
+    const r = parseMenuText(t, "drink");
+    expect(r.items.map((i) => [i.name, i.variants.map((v) => `${v.label}${v.price}`).join(" ")])).toEqual([
+      ["黃金烏龍", "M35 L45"],
+      ["紅茶拿鐵", "中杯50 大杯60"],
+    ]);
+  });
+});

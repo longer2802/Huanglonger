@@ -89,18 +89,53 @@ async function getWorker(): Promise<Worker> {
   return workerPromise;
 }
 
+/** 依比例縮放後的尺寸（最多 900 萬像素，避免手機記憶體不足） */
+function scaledSize(w: number, h: number, scale: number) {
+  let sc = scale;
+  if (w * h * sc * sc > 9_000_000) sc = Math.sqrt(9_000_000 / (w * h));
+  return { w: Math.max(1, Math.round(w * sc)), h: Math.max(1, Math.round(h * sc)), scale: sc };
+}
+
+/** 方格上的形態學運算（max = 膨脹、min = 侵蝕），可分離成水平、垂直兩次 */
+function morph(src: Uint8Array, gw: number, gh: number, r: number, op: "max" | "min"): Uint8Array {
+  const tmp = new Uint8Array(src.length);
+  const out = new Uint8Array(src.length);
+  const pick = op === "max" ? (a: number, b: number) => (a > b ? a : b) : (a: number, b: number) => (a < b ? a : b);
+  const init = op === "max" ? 0 : 1;
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      let v = init;
+      for (let k = -r; k <= r; k++) {
+        const xx = x + k;
+        v = pick(v, xx < 0 || xx >= gw ? init : src[y * gw + xx]);
+      }
+      tmp[y * gw + x] = v;
+    }
+  }
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      let v = init;
+      for (let k = -r; k <= r; k++) {
+        const yy = y + k;
+        v = pick(v, yy < 0 || yy >= gh ? init : tmp[yy * gw + x]);
+      }
+      out[y * gw + x] = v;
+    }
+  }
+  return out;
+}
+
 /**
  * 辨識前的影像處理：
- * - 等比例縮放到長邊約 2400px（小圖放大讓小字看得清楚，大圖縮小避免手機記憶體不足）
- * - 轉灰階；深色底淺色字（黑底金字）自動反白成白底黑字
- * - 拉高對比（依亮度分布 2%～98% 重新伸展）
+ * - 依 scale 等比例縮放（呼叫端依字的大小決定，讓中文字高落在辨識引擎最擅長的範圍）
+ * - 轉灰階、拉高對比（依亮度分布 2%～98% 重新伸展）
+ * - 找出「大面積的深色底」（黑底、深色標題色塊），只把那些區域反白，整張統一成淺底深字：
+ *   深底為主就整張反白；淺底為主時可選擇只反白深色大區塊（標題色塊），邊緣乾淨、不會切到字
  */
-export async function preprocess(blob: Blob, targetSide = 2400): Promise<HTMLCanvasElement> {
+export async function preprocess(blob: Blob, scale: number, mode: "global" | "regions" = "global"): Promise<{ canvas: HTMLCanvasElement; scale: number; regionShare: number; dark: boolean }> {
   const bitmap = await loadBitmap(blob);
-  const longest = Math.max(bitmap.width, bitmap.height);
-  const scale = Math.min(2.5, targetSide / longest);
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const size = scaledSize(bitmap.width, bitmap.height, scale);
+  const { w, h } = size;
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -130,20 +165,57 @@ export async function preprocess(blob: Blob, targetSide = 2400): Promise<HTMLCan
     }
     return 255;
   };
-  const median = pct(0.5);
-  const dark = median < 110;
   const lo = pct(0.02);
   const hi = pct(0.98);
   const range = Math.max(1, hi - lo);
-  for (let p = 0, i = 0; p < gray.length; p++, i += 4) {
-    let v = ((gray[p] - lo) * 255) / range;
-    if (dark) v = 255 - v;
-    v = v < 0 ? 0 : v > 255 ? 255 : v;
-    d[i] = d[i + 1] = d[i + 2] = v;
-    d[i + 3] = 255;
+  const mid = lo + range * 0.45;
+
+  // 細格子（約長邊的 1/400）
+  const C = Math.max(3, Math.round(Math.max(w, h) / 400));
+  const gw = Math.ceil(w / C);
+  const gh = Math.ceil(h / C);
+  const darkCell = new Uint8Array(gw * gh);
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      let sum = 0;
+      let n = 0;
+      for (let y = gy * C; y < Math.min(h, (gy + 1) * C); y += 2) {
+        for (let x = gx * C; x < Math.min(w, (gx + 1) * C); x += 2) {
+          sum += gray[y * w + x];
+          n++;
+        }
+      }
+      darkCell[gy * gw + gx] = n && sum / n < mid ? 1 : 0;
+    }
+  }
+  // 整張圖以深底為主（黑底菜單）→ 整張反白；以淺底為主 → 找出深色大區塊（標題色塊）。
+  // mode = "regions" 時只把深色大區塊反白：開運算去掉文字筆畫這種細東西，閉運算把色塊裡的字補成整塊
+  const dark = pct(0.5) < 110;
+  const mask = new Uint8Array(darkCell.length);
+  let regionShare = 0;
+  if (dark) {
+    mask.fill(1);
+  } else {
+    const region = morph(morph(morph(morph(darkCell, gw, gh, 2, "min"), gw, gh, 2, "max"), gw, gh, 4, "max"), gw, gh, 4, "min");
+    let n = 0;
+    for (let i = 0; i < region.length; i++) n += region[i];
+    regionShare = n / region.length;
+    if (mode === "regions") mask.set(region);
+  }
+
+  for (let y = 0, p = 0; y < h; y++) {
+    const row = Math.min(gh - 1, Math.floor(y / C)) * gw;
+    for (let x = 0; x < w; x++, p++) {
+      let v = ((gray[p] - lo) * 255) / range;
+      if (mask[row + Math.min(gw - 1, Math.floor(x / C))]) v = 255 - v;
+      v = v < 0 ? 0 : v > 255 ? 255 : v;
+      const i = p * 4;
+      d[i] = d[i + 1] = d[i + 2] = v;
+      d[i + 3] = 255;
+    }
   }
   ctx.putImageData(img, 0, 0);
-  return canvas;
+  return { canvas, scale: size.scale, regionShare, dark };
 }
 
 async function loadBitmap(blob: Blob): Promise<ImageBitmap | HTMLImageElement> {
@@ -206,17 +278,126 @@ function segmentsFromBlocks(blocks: { paragraphs: { lines: { words: { text: stri
   return out;
 }
 
+type Blocks = Parameters<typeof segmentsFromBlocks>[0];
+
+/** 看起來像價格、但信心不足的片段（「4?5」「Go5」「50/60O」）：只允許數字再讀一次 */
+function looksNumeric(seg: OcrSegment): boolean {
+  const t = seg.text.replace(/\s+/g, "");
+  if (!t || t.length > 10 || /[\u3400-\u9fff]/.test(t)) return false;
+  if (!/^[0-9A-Za-z?$/+.:-]+$/.test(t)) return false;
+  return /\d/.test(t) || (t.length >= 2 && t.length <= 4);
+}
+
+/** 中文字高（中位數，排除特別大的標題）：辨識引擎在字高約 30～60px 時最準 */
+function typicalCjkHeight(segments: OcrSegment[]): number {
+  const hs = segments.filter((s) => s.conf >= 50 && (s.text.match(/[\u3400-\u9fff]/g) ?? []).length >= 2).map((s) => s.y1 - s.y0);
+  if (hs.length < 2) return 0;
+  hs.sort((a, b) => a - b);
+  return hs[Math.floor((hs.length - 1) * 0.4)];
+}
+
+/** 評分：配到價格的品項越多越好，多規格加分，信心低的扣分 */
+export function scoreLayout(text: string): number {
+  let score = 0;
+  for (const line of text.split("\n")) {
+    if (!line || line.startsWith("【")) continue;
+    const nums = line.match(/\d{2,4}/g) ?? [];
+    const low = /\?\?$/.test(line);
+    if (nums.length) score += 1 + 0.4 * (nums.length - 1) - (low ? 0.45 : 0);
+    else score += low ? 0 : 0.15;
+  }
+  return score;
+}
+
+const IDEAL_HEIGHT = 46;
+
 export async function recognizeImage(blob: Blob, onProgress: (p: OcrProgress) => void): Promise<OcrResult> {
   progressCb = onProgress;
   try {
     onProgress({ stage: "影像處理（反白、提高對比）", progress: 0 });
-    const canvas = await preprocess(blob);
+    const probe = await loadBitmap(blob);
+    const longest = Math.max(probe.width, probe.height);
+    if ("close" in probe && typeof probe.close === "function") probe.close();
     const worker = await getWorker();
-    const { data } = await withTimeout(worker.recognize(canvas, {}, { text: true, blocks: true }), 240_000, "辨識逾時，照片可能太複雜，請裁切後重試");
+    let currentPsm: PSM = PSM.AUTO;
+    const run = async (scale: number, mode: "global" | "regions", psm: PSM = PSM.AUTO) => {
+      const pre = await preprocess(blob, scale, mode);
+      if (psm !== currentPsm) {
+        await worker.setParameters({ tessedit_pageseg_mode: psm });
+        currentPsm = psm;
+      }
+      const { data } = await withTimeout(worker.recognize(pre.canvas, {}, { text: true, blocks: true }), 240_000, "辨識逾時，照片可能太複雜，請裁切後重試");
+      const segments = data.blocks ? segmentsFromBlocks(data.blocks as unknown as Blocks) : [];
+      const layout = segments.length ? layoutMenuText(segments) : "";
+      return { ...pre, mode, psm, segments, text: data.text, layout, score: scoreLayout(layout) };
+    };
+
+    // 候選 1：長邊約 2400px、整張依底色反白
+    const candidates = [await run(Math.min(2.5, 2400 / longest), "global")];
+    let best = candidates[0];
+    // 候選 2：字太大或太小時，調整到引擎最擅長的字高再辨識一次
+    const hgt = typicalCjkHeight(best.segments);
+    if (!hgt || hgt < IDEAL_HEIGHT * 0.65 || hgt > IDEAL_HEIGHT * 1.45) {
+      const want = hgt ? (best.scale * IDEAL_HEIGHT) / hgt : best.scale * 1.5;
+      const scale = Math.min(Math.max(want, 1000 / longest), Math.min(4, 3600 / longest));
+      if (Math.abs(scale / best.scale - 1) > 0.2) {
+        onProgress({ stage: "調整字的大小再辨識一次", progress: 0 });
+        candidates.push(await run(scale, "global"));
+      }
+    }
+    best = candidates.reduce((a, b) => (b.score > a.score ? b : a));
+    // 候選 3：淺底配深色標題色塊（多數飲料單）→ 只反白色塊再辨識一次，讀出色塊裡的分類與「中杯 大杯」
+    if (!best.dark && best.regionShare > 0.02 && best.regionShare < 0.5) {
+      onProgress({ stage: "辨識色塊裡的文字", progress: 0 });
+      candidates.push(await run(best.scale, "regions"));
+      best = candidates.reduce((a, b) => (b.score > a.score ? b : a));
+    }
+    // 候選 4：讀到很多中文品名、卻很少配到價格（表格式菜單常見，自動版面分析會漏掉整列）→ 改用「零散文字」模式再讀一次
+    const nameCount = best.segments.filter((s) => s.conf >= 50 && (s.text.match(/[\u3400-\u9fff]/g) ?? []).length >= 2).length;
+    const pricedCount = best.layout.split("\n").filter((l) => !l.startsWith("【") && /\d{2,4}/.test(l)).length;
+    if (nameCount >= 3 && pricedCount < nameCount * 0.7) {
+      onProgress({ stage: "改用表格模式再辨識一次", progress: 0 });
+      candidates.push(await run(best.scale, best.mode, PSM.SPARSE_TEXT));
+      best = candidates.reduce((a, b) => (b.score > a.score ? b : a));
+    }
+    if (currentPsm !== PSM.AUTO) {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+      currentPsm = PSM.AUTO;
+    }
+    if ((window as unknown as { __ocrDebug?: boolean }).__ocrDebug) {
+      (window as unknown as { __ocrCanvas?: string }).__ocrCanvas = best.canvas.toDataURL("image/jpeg", 0.8);
+      (window as unknown as { __ocrCandidates?: unknown }).__ocrCandidates = candidates.map((c) => ({ scale: c.scale, mode: c.mode, psm: c.psm, score: c.score }));
+    }
+    const { canvas, segments } = best;
+
+    // 數字重讀：價格位置信心不足時，限定只辨識數字（和 $ / + M L）再讀一次那一小塊
+    const retry = segments.filter((s) => s.conf < 85 && looksNumeric(s)).slice(0, 60);
+    if (retry.length) {
+      onProgress({ stage: "重新確認價格數字", progress: 0 });
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE, tessedit_char_whitelist: "0123456789$/+ML" });
+      try {
+        for (let i = 0; i < retry.length; i++) {
+          const s = retry[i];
+          const pad = Math.round((s.y1 - s.y0) * 0.35);
+          const left = Math.max(0, s.x0 - pad);
+          const top = Math.max(0, s.y0 - pad);
+          const rect = { left, top, width: Math.min(canvas.width - left, s.x1 - s.x0 + pad * 2), height: Math.min(canvas.height - top, s.y1 - s.y0 + pad * 2) };
+          const r = await worker.recognize(canvas, { rectangle: rect });
+          const text = r.data.text.trim();
+          if (/\d{2}/.test(text) && r.data.confidence > s.conf) {
+            s.text = text;
+            s.conf = r.data.confidence;
+          }
+          onProgress({ stage: "重新確認價格數字", progress: (i + 1) / retry.length });
+        }
+      } finally {
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO, tessedit_char_whitelist: "" });
+      }
+    }
+
     onProgress({ stage: "整理品名與價格", progress: 1 });
-    const segments = data.blocks ? segmentsFromBlocks(data.blocks) : [];
     (window as unknown as { __ocrSegments?: OcrSegment[] }).__ocrSegments = segments;
-    const raw = data.text.replace(/([一-鿿]) (?=[一-鿿])/g, "$1");
+    const raw = best.text.replace(/([\u4e00-\u9fff]) (?=[\u4e00-\u9fff])/g, "$1");
     const text = segments.length ? layoutMenuText(segments) : raw;
     return { text, raw };
   } finally {
