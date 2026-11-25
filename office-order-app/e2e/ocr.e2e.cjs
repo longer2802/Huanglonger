@@ -1,0 +1,37 @@
+// OCR 實測：上傳繁中菜單照片 → 辨識 → 校對候選清單
+const { chromium } = require('playwright');
+const BASE = process.env.BASE || 'http://localhost:4173/';
+(async () => {
+  const b = await chromium.launch({ env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' } });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => console.log('[console]', m.type(), m.text().slice(0, 300))); p.on('requestfailed', (r) => console.log('[reqfail]', r.url(), r.failure()?.errorText));
+  const reqs = []; p.on('request', (r) => reqs.push(r.url()));
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  console.log('home requests OCR assets?', reqs.some((u) => /tesseract|traineddata|worker\.min/.test(u)));
+  await p.getByRole('button', { name: '＋ 開新訂單' }).click();
+  await p.getByLabel('餐點店家').fill('幸福便當');
+  await p.getByLabel('上傳餐點菜單照片').setInputFiles('e2e/fixtures/menu-bento.jpg');
+  await p.getByRole('button', { name: '辨識', exact: true }).click();
+  const t0 = Date.now();
+  const iv = setInterval(async () => { try { console.log('status:', (await p.locator('[role=status]').allInnerTexts()).join(' / ').slice(0,200), '| err:', await p.locator('.banner.bad').allInnerTexts()); } catch {} }, 5000);
+  await p.getByRole('dialog', { name: '校對餐點候選清單' }).waitFor({ timeout: 60000 });
+  clearInterval(iv);
+  console.log('OCR seconds', ((Date.now() - t0) / 1000).toFixed(1));
+  console.log('same-site OCR assets only:', reqs.filter((u) => /tesseract|traineddata|worker/.test(u)).every((u) => u.startsWith(BASE)));
+  const dlg = p.getByRole('dialog');
+  console.log('banner:', await dlg.locator('.banner').first().innerText());
+  const items = await dlg.locator('[data-testid=menu-item]').evaluateAll((els) => els.map((el) => {
+    const ins = [...el.querySelectorAll('input')].map((i) => i.value);
+    const chips = [...el.querySelectorAll('.chip')].map((c) => c.textContent);
+    return ins.join(' | ') + '  ' + chips.join(',');
+  }));
+  console.log(items.join('\n'));
+  await dlg.getByRole('button', { name: '查看辨識原文' }).click();
+  console.log('RAW:\n' + await dlg.locator('pre').innerText());
+  await p.screenshot({ path: 'shots/ocr-table.png' });
+  await dlg.getByRole('button', { name: '原圖' }).click();
+  await p.screenshot({ path: 'shots/ocr-orig.png' });
+  console.log('errors', errs);
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });

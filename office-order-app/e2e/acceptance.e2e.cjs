@@ -1,0 +1,92 @@
+// 驗收：範例金額、長名單跨頁、桌機表格、JSON 備份還原
+const { chromium } = require('playwright');
+const fs = require('fs');
+const BASE = process.env.BASE || 'http://localhost:4173/';
+const OUT = 'shots/';
+const log = (...a) => console.log(...a);
+const assert = (c, m) => { if (!c) throw new Error('ASSERT: ' + m); log('  ✓', m); };
+
+(async () => {
+  const b = await chromium.launch({ env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' } });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, acceptDownloads: true });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  p.on('dialog', (d) => d.accept());
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+
+  log('1. 範例驗收金額');
+  await p.getByRole('button', { name: '載入範例' }).click();
+  await p.locator('.chip.sample').first().waitFor();
+  assert((await p.locator('.topbar').innerText()).includes('範例'), '範例明確標示「範例」');
+  const card = (n) => p.getByTestId('person-card').filter({ hasText: n });
+  assert((await card('阿榮').innerText()).includes('$175'), '阿榮應收 175（110 便當＋55 飲料＋10 加料）');
+  assert((await card('小妤').innerText()).includes('$230'), '小妤應收 230（95×2＋40）');
+  assert((await card('小陳').innerText()).includes('不訂'), '第三人不訂');
+  await p.getByRole('button', { name: '總計收款 →' }).click();
+  const txt = async (id) => (await p.getByTestId(id).innerText()).trim();
+  assert(await txt('vendor-total-meal') === '$300', '餐點店家合計 300');
+  assert(await txt('vendor-total-drink') === '$105', '飲料店家合計 105');
+  assert(await txt('grand-total') === '$405', '全單 405');
+  await p.getByLabel('阿榮 已收').check();
+  assert(await txt('paid-total') === '$175', '阿榮已收 → 已收 175');
+  assert(await txt('unpaid-total') === '$230', '待收 230');
+  await p.screenshot({ path: OUT + 'a-totals.png', fullPage: true });
+
+  log('2. 內部收款單與店家單金額一致');
+  await p.getByRole('button', { name: '去匯出 →' }).click();
+  await p.getByRole('button', { name: '內部收款' }).click();
+  await p.waitForTimeout(600);
+  await p.getByAltText('預覽第 1 頁').screenshot({ path: OUT + 'a-internal-preview.png' });
+
+  log('3. 長名單跨頁');
+  await p.getByRole('button', { name: /名單/ }).first().click();
+  const names = Array.from({ length: 70 }, (_, i) => `測試同事${String(i + 1).padStart(2, '0')}`).join('\n');
+  await p.getByLabel('同事名單').fill(names);
+  await p.getByRole('button', { name: '預覽名單' }).click();
+  await p.getByRole('button', { name: /建立 70 人/ }).click();
+  await p.getByRole('navigation', { name: '步驟' }).getByRole('button', { name: /匯出/ }).click();
+  await p.getByRole('button', { name: '內部收款' }).click();
+  await p.getByAltText('預覽第 2 頁').waitFor();
+  const pages = await p.locator('.preview-pages img').count();
+  assert(pages >= 2, `73 人的內部收款單分成 ${pages} 頁`);
+  const downloads = [];
+  p.on('download', (d) => downloads.push(d));
+  await p.getByRole('button', { name: '下載 PNG' }).click();
+  await p.waitForTimeout(2500);
+  const names2 = downloads.map((d) => d.suggestedFilename());
+  log('   ', names2.join(', '));
+  assert(names2.length === pages && names2.every((n, i) => n.includes(`_第${i + 1}頁.png`)), 'PNG 過長時切成有頁碼的多張');
+  for (const d of downloads) await d.saveAs(OUT + d.suggestedFilename());
+  const [pdfD] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: '下載 PDF' }).click()]);
+  const pdfPath = OUT + 'long-' + pdfD.suggestedFilename();
+  await pdfD.saveAs(pdfPath);
+  const pdfPages = (fs.readFileSync(pdfPath).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  assert(pdfPages === pages, `PDF 也是 ${pdfPages} 頁 A4`);
+
+  log('4. JSON 備份與還原');
+  await p.getByRole('button', { name: '回首頁' }).click();
+  const [bk] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: '匯出 JSON 備份' }).click()]);
+  const bkPath = OUT + bk.suggestedFilename();
+  await bk.saveAs(bkPath);
+  assert(/辦公室揪訂_備份_\d{4}-\d{2}-\d{2}\.json$/.test(bkPath), '備份檔名');
+  const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 } });
+  const p2 = await ctx2.newPage();
+  await p2.goto(BASE, { waitUntil: 'networkidle' });
+  assert(await p2.getByText('還沒有訂單').count() === 1, '新瀏覽器沒有資料');
+  const [chooser] = await Promise.all([p2.waitForEvent('filechooser'), p2.getByRole('button', { name: '匯入還原' }).click()]);
+  await chooser.setFiles(bkPath);
+  await p2.getByText(/已還原 1 張訂單/).waitFor();
+  assert(await p2.getByText('範例：午餐＋飲料').count() === 1, '匯入後訂單回來了');
+
+  log('5. 桌機表格');
+  const ctx3 = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p3 = await ctx3.newPage();
+  await p3.goto(BASE, { waitUntil: 'networkidle' });
+  await p3.getByRole('button', { name: '載入範例' }).click();
+  await p3.getByRole('table', { name: '點餐表' }).waitFor();
+  assert(await p3.getByTestId('person-card').count() === 0, '桌機顯示點餐表格（非手機卡片）');
+  await p3.getByRole('button', { name: '編輯' }).first().click();
+  await p3.screenshot({ path: OUT + 'd-order.png', fullPage: true });
+  log('errors', errs);
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });
