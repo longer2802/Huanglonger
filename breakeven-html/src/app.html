@@ -86,6 +86,8 @@
   .res .formula { margin-top: 10px; font-size: .82rem; opacity: .9; background: rgba(255,255,255,.14); border-radius: 10px; padding: 6px 10px; }
   .error { display: none; background: var(--red-soft); color: var(--red); border-radius: 12px; padding: 12px 14px; font-weight: 600; margin-bottom: 12px; }
   .error.show { display: block; }
+  .error.soft { background: var(--green-soft); color: var(--green); font-weight: 500; }
+  input::placeholder { color: #A6B2AA; font-weight: 500; }
 
   .calc { margin: 0; padding: 0; list-style: none; counter-reset: s; }
   .calc li { position: relative; padding: 10px 0 10px 40px; border-bottom: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
@@ -161,7 +163,7 @@
     <section class="card" aria-labelledby="h-margin">
       <h2 id="h-margin"><span class="step">2</span>實際毛利率</h2>
       <label class="f" for="margin">產品毛利率（售價扣掉食材／進貨成本後的比例）</label>
-      <div class="input"><input id="margin" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div>
+      <div class="input"><input id="margin" inputmode="decimal" autocomplete="off" placeholder="68"><span class="unit">%</span></div>
 
       <div class="switch">
         <div><b>有開發票</b><div class="hint" style="margin:0">要扣營業稅</div></div>
@@ -181,7 +183,7 @@
         </div>
         <div>
           <label class="f" for="target">想賺的月淨利</label>
-          <div class="input"><input id="target" inputmode="numeric" autocomplete="off"><span class="unit">元</span></div>
+          <div class="input"><input id="target" inputmode="numeric" autocomplete="off" placeholder="100,000"><span class="unit">元</span></div>
         </div>
       </div>
     </section>
@@ -267,7 +269,7 @@
 <script>
 (() => {
   "use strict";
-  const STORE_KEY = "breakeven-calc-v1";
+  const STORE_KEY = "breakeven-calc-v2"; // v2：預設改為空白，範例數字只當灰色提示
   const EXAMPLE = {
     costs: [
       { name: "人事", amount: 140000 },
@@ -276,7 +278,7 @@
     ],
     margin: 68, invoice: true, tax: 5, days: 30, target: 100000, actual: null,
   };
-  const EMPTY = { costs: [{ name: "人事", amount: null }, { name: "房租", amount: null }, { name: "水電", amount: null }], margin: null, invoice: true, tax: 5, days: 30, target: null, actual: null };
+  const EMPTY = { costs: [{ name: "人事", amount: null, hint: 140000 }, { name: "房租", amount: null, hint: 40000 }, { name: "水電", amount: null, hint: 20000 }], margin: null, invoice: true, tax: 5, days: 30, target: null, actual: null };
 
   const $ = (id) => document.getElementById(id);
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -290,8 +292,8 @@
   const wan = (n) => (n % 10000 === 0 ? `${n / 10000} 萬` : money(n));
 
   let state;
-  try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || clone(EXAMPLE); } catch { state = clone(EXAMPLE); }
-  if (!Array.isArray(state.costs)) state = clone(EXAMPLE);
+  try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || clone(EMPTY); } catch { state = clone(EMPTY); }
+  if (!Array.isArray(state.costs)) state = clone(EMPTY);
   const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {} };
 
   // ---------- 數字輸入框：輸入時只留數字，離開時加千分位 ----------
@@ -321,6 +323,7 @@
         <button type="button" class="icon-btn" aria-label="刪除這項">×</button>`;
       const [name, amt] = row.querySelectorAll("input");
       name.value = c.name || "";
+      amt.placeholder = c.hint ? fmt(c.hint) : "0";
       name.addEventListener("input", () => { c.name = name.value; save(); render(); });
       bindNumber(amt, () => c.amount, (v) => (c.amount = v));
       row.querySelector("button").addEventListener("click", () => {
@@ -369,18 +372,19 @@
 
     const err = $("err");
     let msg = "";
-    if (c.fixed <= 0) msg = "請先輸入每月固定成本。";
-    else if (state.margin == null) msg = "請輸入產品毛利率。";
+    let soft = false;
+    if (c.fixed <= 0 || state.margin == null) { msg = "填入你的固定成本和毛利率，結果會馬上算出來。灰色數字是範例，也可以按下方「套用範例數字」看看。"; soft = true; }
     else if (c.eff <= 0) msg = "實際毛利率小於或等於 0：每賣一筆都在賠錢，營業額再高也打不平。請檢查毛利率。";
     else if (c.eff > 100) msg = "毛利率不能超過 100%。";
     err.textContent = msg;
     err.classList.toggle("show", !!msg);
+    err.classList.toggle("soft", soft);
 
     $("beMonth").textContent = c.ok ? `${fmt(c.be)} 元／月` : "—";
     $("beDay").textContent = c.ok ? money(c.be / c.days) : "—";
     $("tgLabel").textContent = c.target > 0 ? `想再賺 ${wan(c.target)}` : "要賺錢（請輸入目標淨利）";
-    $("tgMonth").textContent = c.ok ? `${fmt(c.tg)} 元／月` : "—";
-    $("tgDay").textContent = c.ok ? money(c.tg / c.days) : "—";
+    $("tgMonth").textContent = c.ok && c.target > 0 ? `${fmt(c.tg)} 元／月` : "—";
+    $("tgDay").textContent = c.ok && c.target > 0 ? money(c.tg / c.days) : "—";
 
     renderSteps(c);
     renderTable(c);
