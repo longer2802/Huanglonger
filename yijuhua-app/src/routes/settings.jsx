@@ -3,6 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Download, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import CategoryManager from "@/components/CategoryManager";
+import OfflineDownload from "@/components/OfflineDownload";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { restoreMissingCategories } from "@/lib/categories";
@@ -184,6 +185,8 @@ function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <OfflineDownload />
 
       <section className="mt-6 space-y-2 px-1 text-sm leading-relaxed text-muted-foreground">
         <p>一句話記帳是 AI 數位森林旗下的免費生活效率工具。</p>

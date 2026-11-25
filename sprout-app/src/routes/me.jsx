@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Baby, BellRing, CalendarHeart, Download, FileLock2, FlaskConical, HeartHandshake, Library, Plus, Smartphone, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
+import OfflineDownload from "@/components/OfflineDownload";
 import { Btn, Card, Confirm, Field, Fold, inputClass, SectionTitle, Sheet } from "@/components/kit";
 import { BabyForm, PregnancyForm } from "@/components/Forms";
 import { personName } from "@/components/CarePrompt";
@@ -84,6 +85,7 @@ function MePage() {
       <ReminderSettings />
       <InstallGuide />
       <BackupSection />
+      <OfflineDownload />
       {family.demo ? <DemoSection /> : null}
       <DangerZone />
 
