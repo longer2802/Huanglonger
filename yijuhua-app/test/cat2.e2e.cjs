@@ -1,0 +1,32 @@
+const { chromium, devices } = require('playwright');
+const URL0 = 'https://app-63aa1609.base44.app';
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ ...devices['iPhone 13'], timezoneId: 'Asia/Taipei', storageState: '../shots/state.json' });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto(URL0 + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+  await p.getByPlaceholder(/昨天加油/).fill('買貓砂 300 元');
+  await p.getByRole('button', { name: '整理' }).click(); await p.waitForTimeout(1500);
+  await p.getByRole('button', { name: '修改這筆' }).click(); await p.waitForTimeout(600);
+  const sel = p.locator('select[id$="-category"]').first();
+  console.log('form category:', await sel.inputValue(), '| options:', (await sel.locator('option').allInnerTexts()).join(','));
+  await p.screenshot({ path: '../shots/cat-form.png' });
+  await p.getByRole('button', { name: /確認儲存|儲存/ }).last().click(); await p.waitForTimeout(1500);
+  console.log('ledger:', await p.evaluate(() => JSON.parse(localStorage.getItem('yijuhua-ledger-v1')||'[]').map(r=>r.categoryName+':'+r.amount).join(',')));
+  await p.goto(URL0 + '/ledger', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+  console.log('filter has 寵物:', await p.locator('select[aria-label="分類篩選"] option', { hasText: '寵物' }).count(), '/ 兼職:', await p.locator('select[aria-label="分類篩選"] option', { hasText: '兼職' }).count());
+  console.log('list icon:', (await p.locator('section[aria-label="交易列表"] li').first().innerText()).replace(/\n/g,' | '));
+  await p.goto(URL0 + '/recurring', { waitUntil: 'networkidle' }); await p.waitForTimeout(1200);
+  await p.getByRole('button', { name: '新增' }).first().click(); await p.waitForTimeout(500);
+  console.log('recurring has 寵物:', await p.locator('#sch-category option', { hasText: '寵物' }).count());
+  // delete category, record keeps name
+  await p.goto(URL0 + '/settings', { waitUntil: 'networkidle' }); await p.waitForTimeout(1200);
+  await p.getByRole('button', { name: '刪除寵物' }).click();
+  await p.getByRole('button', { name: '確定刪除' }).click(); await p.waitForTimeout(500);
+  console.log('after delete stored:', await p.evaluate(() => localStorage.getItem('yijuhua-custom-categories-v1')));
+  await p.goto(URL0 + '/ledger', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+  console.log('list after delete:', (await p.locator('section[aria-label="交易列表"] li').first().innerText()).replace(/\n/g,' | '));
+  console.log('errors', errs);
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });

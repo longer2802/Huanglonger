@@ -1,0 +1,23 @@
+const store={}; globalThis.localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}};
+globalThis.window={addEventListener(){}};
+const C=await import('./cat.mjs');
+const a=(c,m)=>{if(!c)throw new Error(m)};
+C.addCustomCategory({name:'寵物',type:'expense',icon:'🐶',keywords:C.splitKeywords('飼料、貓砂 獸醫')});
+a(C.EXPENSE_CATEGORIES.at(-1).name==='其他支出','other last');
+a(C.EXPENSE_CATEGORIES.at(-2).name==='寵物','custom before other');
+a(C.EXPENSE_CATEGORIES.at(-2).keywords.join()==='寵物,飼料,貓砂,獸醫','kw');
+a(C.findCategory('寵物')?.icon==='🐶','find');
+a(C.ALL_CATEGORIES.some(c=>c.name==='寵物'),'all');
+let e; try{C.addCustomCategory({name:'飲食',type:'expense'})}catch(x){e=x.message} a(/已經有/.test(e),'dup builtin');
+try{C.addCustomCategory({name:'寵物',type:'income'})}catch(x){e=x.message} a(/已經有/.test(e),'dup custom');
+C.addCustomCategory({name:'兼職',type:'income',icon:'💻'});
+a(C.INCOME_CATEGORIES.at(-2).name==='兼職' && C.INCOME_CATEGORIES.at(-1).name==='其他收入','income');
+// reload from storage
+C.loadCustomCategories(); a(C.getCustomCategories().length===2,'reload');
+const id=C.getCustomCategories()[0].id; C.updateCustomCategory(id,{icon:'🐱',keywords:['罐頭']});
+a(C.findCategory('寵物').icon==='🐱' && C.findCategory('寵物').keywords.join()==='寵物,罐頭','update');
+C.removeCustomCategory(id); a(!C.findCategory('寵物') && C.categoryIcon('寵物')==='📦','remove');
+a(C.restoreMissingCategories([{type:'expense',categoryName:'寵物'},{type:'expense',categoryName:'飲食'},{type:'transfer',categoryName:'X'}])===1,'restore');
+a(C.findCategory('寵物')?.custom,'restored');
+store[C.CUSTOM_KEY]='garbage'; C.loadCustomCategories(); a(C.getCustomCategories().length===0 && C.EXPENSE_CATEGORIES.length===11,'garbage');
+console.log('CATEGORIES OK');

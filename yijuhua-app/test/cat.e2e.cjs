@@ -1,0 +1,31 @@
+const { chromium, devices } = require('playwright');
+const URL0 = 'https://app-63aa1609.base44.app';
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ ...devices['iPhone 13'], timezoneId: 'Asia/Taipei' });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto(URL0 + '/settings', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+  const sec = p.getByRole('region', { name: '我的分類' });
+  await sec.getByLabel(/分類名稱/).fill('寵物');
+  await sec.getByRole('radio', { name: '圖示 🐶' }).click();
+  await sec.getByLabel(/關鍵字/).fill('飼料、貓砂 獸醫');
+  await sec.getByRole('button', { name: '新增這個分類' }).click(); await p.waitForTimeout(400);
+  await sec.getByRole('radio', { name: '收入分類' }).click();
+  await sec.getByLabel(/分類名稱/).fill('兼職');
+  await sec.getByRole('button', { name: '新增這個分類' }).click(); await p.waitForTimeout(400);
+  await sec.getByLabel(/分類名稱/).fill('薪資');
+  await sec.getByRole('button', { name: '新增這個分類' }).click(); await p.waitForTimeout(400);
+  console.log('dup toast:', await p.getByText('已經有「薪資」這個分類').count());
+  console.log('list:', (await sec.getByRole('list', { name: '已新增的分類' }).innerText()).replace(/\n/g, ' | '));
+  console.log('stored:', await p.evaluate(() => localStorage.getItem('yijuhua-custom-categories-v1')));
+  await p.screenshot({ path: '../shots/cat-settings.png', fullPage: true });
+  // home: inspect text entry
+  await p.goto(URL0 + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+  console.log('home buttons:', (await p.getByRole('button').allInnerTexts()).join(' / '));
+  console.log('textboxes:', await p.locator('textarea, input[type=text], input:not([type])').count());
+  await p.screenshot({ path: '../shots/cat-home.png' });
+  console.log('errors', errs);
+  await ctx.storageState({ path: '../shots/state.json' });
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });
