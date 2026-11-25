@@ -1,0 +1,575 @@
+<title>損益平衡點試算</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* 版面：兩欄輸入（固定成本｜毛利率）→ 兩張結果卡 → 圖表 → 計算過程與對照表 → 檢查營業額 → 公式 */
+  :root {
+    --bg: #F2F5F1;
+    --surface: #FFFFFF;
+    --surface-2: #F6F8F5;
+    --fg: #18261E;
+    --muted: #5A6A61;
+    --line: #D9E1DA;
+    --green: #2F6B4F;
+    --green-2: #3F8F68;
+    --green-soft: #E4F1E8;
+    --red: #B93A26;
+    --red-soft: #FBE7E1;
+    --gold: #9A6E06;
+    --gold-soft: #FFF4D6;
+    --switch-off: #C3CEC6;
+    --loss-fill: #F3B5A5;
+    --gain-fill: #A9DDBD;
+    --mark-be: #2F6B4F;
+    --mark-tg: #C8930F;
+    --mark-me: #2F6FD0;
+    --grid: #E5EBE6;
+    --zero: #18261E;
+    --be-a: #2F6B4F;
+    --be-b: #3F8F68;
+    --tg-a: #8A5A00;
+    --tg-b: #C8930F;
+    --on-accent: #FFFFFF;
+    --remember-bg: #1F3A2D;
+    --remember-fg: #E6F3EA;
+    --remember-key: #F5C443;
+    --font: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1712; --surface: #16211B; --surface-2: #1B2821; --fg: #E3EDE6; --muted: #9DB0A4; --line: #2A3A31;
+      --green: #74C69D; --green-2: #4FA97C; --green-soft: #1C3326; --red: #F08A73; --red-soft: #3A201A;
+      --gold: #E8B84A; --gold-soft: #3A2F13; --switch-off: #3A4A41; --loss-fill: #7A3B2F; --gain-fill: #2C6B4B;
+      --mark-be: #74C69D; --mark-tg: #E8B84A; --mark-me: #82AAF0; --grid: #23322A; --zero: #C9D6CE;
+      --be-a: #275B43; --be-b: #357C59; --tg-a: #6F4A04; --tg-b: #A87A10; --on-accent: #FFFFFF;
+      --remember-bg: #0B120E; --remember-fg: #DCEBE1; --remember-key: #F5C443;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1712; --surface: #16211B; --surface-2: #1B2821; --fg: #E3EDE6; --muted: #9DB0A4; --line: #2A3A31;
+    --green: #74C69D; --green-2: #4FA97C; --green-soft: #1C3326; --red: #F08A73; --red-soft: #3A201A;
+    --gold: #E8B84A; --gold-soft: #3A2F13; --switch-off: #3A4A41; --loss-fill: #7A3B2F; --gain-fill: #2C6B4B;
+    --mark-be: #74C69D; --mark-tg: #E8B84A; --mark-me: #82AAF0; --grid: #23322A; --zero: #C9D6CE;
+    --be-a: #275B43; --be-b: #357C59; --tg-a: #6F4A04; --tg-b: #A87A10; --on-accent: #FFFFFF;
+    --remember-bg: #0B120E; --remember-fg: #DCEBE1; --remember-key: #F5C443;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { font-size: 17px; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font); line-height: 1.55;
+    -webkit-tap-highlight-color: transparent;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px 40px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 14px; margin: 4px 0 18px; }
+  header .logo { width: 60px; height: 60px; flex: none; border-radius: 16px; }
+  header h1 { margin: 0; font-size: 1.55rem; line-height: 1.2; color: var(--green); letter-spacing: .02em; text-wrap: balance; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: .95rem; }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .span2 { grid-column: 1 / -1; } }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .card h2 { margin: 0 0 12px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+  .step { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: var(--green-2); color: var(--on-accent); font-size: .85rem; align-items: center; justify-content: center; flex: none; }
+  .hint { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+
+  label.f { display: block; font-size: .9rem; color: var(--muted); margin: 10px 0 4px; }
+  .input { position: relative; }
+  .input input, .cost-row input.name {
+    width: 100%; height: 50px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface);
+    color: var(--fg); font-family: inherit; outline: none;
+  }
+  .input input { padding: 0 52px 0 14px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cost-row input.name { padding: 0 12px; font-size: 16px; }
+  .input input:focus, .cost-row input.name:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green-2) 25%, transparent); }
+  .input .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .9rem; pointer-events: none; }
+
+  .cost-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; }
+  .icon-btn:hover, .icon-btn:focus-visible { background: var(--red-soft); color: var(--red); }
+  .add-btn { width: 100%; height: 46px; border: 1.5px dashed var(--green-2); border-radius: 12px; background: var(--green-soft); color: var(--green); font-size: 1rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .total b { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 12px 14px; background: var(--surface-2); border-radius: 12px; }
+  .switch input { appearance: none; width: 52px; height: 30px; border-radius: 99px; background: var(--switch-off); position: relative; cursor: pointer; flex: none; transition: background .2s; margin: 0; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--on-accent); transition: transform .2s; }
+  .switch input:checked { background: var(--green-2); }
+  .switch input:checked::after { transform: translateX(22px); }
+  .switch input:focus-visible { outline: 2px solid var(--green-2); outline-offset: 2px; }
+  .eff { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--green-soft); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .eff b { font-size: 1.5rem; color: var(--green); }
+  .eff small { color: var(--muted); flex-basis: 100%; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+
+  .res-title { margin: 4px 0 10px; font-size: 1.1rem; display: flex; gap: 8px; align-items: center; }
+  .results { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 620px) { .results { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .res { border-radius: var(--radius); padding: 18px; color: var(--on-accent); min-width: 0; }
+  .res.be { background: linear-gradient(135deg, var(--be-a), var(--be-b)); }
+  .res.tg { background: linear-gradient(135deg, var(--tg-a), var(--tg-b)); }
+  .res .lbl { font-size: .95rem; opacity: .92; font-weight: 600; }
+  .res .big { font-size: clamp(1.6rem, 6vw, 2.1rem); font-weight: 800; line-height: 1.15; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .res .sub { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .res .sub b { font-size: 1.25rem; }
+  .res .formula { margin-top: 10px; font-size: .82rem; background: rgba(255,255,255,.15); border-radius: 10px; padding: 6px 10px; }
+  .error { background: var(--red-soft); color: var(--red); border-radius: 12px; padding: 12px 14px; font-weight: 600; margin-bottom: 12px; }
+
+  .calc { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .calc li { position: relative; padding: 10px 0 10px 40px; border-bottom: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
+  .calc li:last-child { border-bottom: 0; }
+  .calc li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--green-soft); color: var(--green); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: .9rem; }
+  .calc .eq { display: block; font-weight: 700; font-size: 1.05rem; word-break: break-word; }
+  .calc .why { color: var(--muted); font-size: .85rem; }
+
+  .chart-box { width: 100%; }
+  .chart-box svg { width: 100%; height: auto; display: block; }
+  .chart-box .c-loss { fill: var(--loss-fill); }
+  .chart-box .c-gain { fill: var(--gain-fill); }
+  .chart-box .c-grid { stroke: var(--grid); }
+  .chart-box .c-zero { stroke: var(--zero); }
+  .chart-box .c-line { stroke: var(--green-2); }
+  .chart-box .c-tick { fill: var(--muted); }
+  .chart-box .c-lbl { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; font-weight: 700; }
+  .chart-box .c-be { fill: var(--mark-be); }
+  .chart-box .c-tg { fill: var(--mark-tg); }
+  .chart-box .c-me { fill: var(--mark-me); }
+  .chart-box .c-me-line { stroke: var(--mark-me); }
+  .chart-box .c-dot { stroke: var(--surface); stroke-width: 3px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .legend i.round { border-radius: 50%; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--line); font-size: .95rem; }
+  th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+  th:first-child, td:first-child { text-align: left; }
+  tr.hl td { background: var(--gold-soft); font-weight: 700; }
+  tr.zero td { background: var(--green-soft); font-weight: 700; }
+
+  .check { margin-top: 12px; border-radius: 12px; padding: 14px; }
+  .check.loss { background: var(--red-soft); color: var(--red); }
+  .check.ok { background: var(--green-soft); color: var(--green); }
+  .check .head { font-weight: 800; font-size: 1.1rem; }
+  .check .det { color: var(--fg); font-size: .92rem; margin-top: 4px; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { min-height: 48px; padding: 0 18px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; font-family: inherit; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); }
+  .btn.primary { background: var(--green-2); border-color: var(--green-2); color: var(--on-accent); }
+  .btn.warn { border-color: var(--red); color: var(--red); }
+  .btn:focus-visible, .add-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--green-2); outline-offset: 2px; }
+  .btn:active { transform: scale(.97); }
+
+  .remember { background: var(--remember-bg); color: var(--remember-fg); border-color: var(--remember-bg); }
+  .remember h2 { color: var(--remember-fg); }
+  .remember .f2 { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 620px) { .remember .f2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .remember .f2 div { background: rgba(255,255,255,.07); border-radius: 12px; padding: 12px 14px; }
+  .remember .f2 b { display: block; color: var(--remember-key); margin-bottom: 2px; }
+  .remember .hint { color: var(--remember-fg); opacity: .75; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 22px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: .95rem; opacity: 0; pointer-events: none; transition: all .25s; z-index: 10; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <img class="logo" src="{{ICON_192}}" alt="">
+    <div>
+      <h1>損益平衡點試算</h1>
+      <p>開店前不會算這個，就是在賭。算出「打平、不虧」的最低營業額。</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-fixed">
+      <h2 id="h-fixed"><span class="step">1</span>每月固定成本</h2>
+      <div id="costs"></div>
+      <button type="button" class="add-btn" id="addCost">＋ 新增一項固定成本</button>
+      <p class="hint">不論賣多少都要付的錢：人事、房租、水電、網路、貸款、軟體月費…</p>
+      <div class="total"><span>固定成本合計</span><b id="fixedTotal">0 元</b></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-margin">
+      <h2 id="h-margin"><span class="step">2</span>實際毛利率</h2>
+      <label class="f" for="margin">產品毛利率（售價扣掉食材／進貨成本後的比例）</label>
+      <div class="input"><input id="margin" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div>
+
+      <div class="switch">
+        <label for="invoice"><b>有開發票</b><span class="hint" style="display:block;margin:0">要扣營業稅</span></label>
+        <input type="checkbox" id="invoice">
+      </div>
+      <div id="taxBox">
+        <label class="f" for="tax">營業稅率</label>
+        <div class="input"><input id="tax" inputmode="decimal" autocomplete="off"><span class="unit">%</span></div>
+      </div>
+
+      <div class="eff"><span>實際毛利率</span><b id="effMargin">0%</b><small id="effHow"></small></div>
+
+      <div class="two">
+        <div>
+          <label class="f" for="days">每月營業天數</label>
+          <div class="input"><input id="days" inputmode="numeric" autocomplete="off"><span class="unit">天</span></div>
+        </div>
+        <div>
+          <label class="f" for="target">想賺的月淨利</label>
+          <div class="input"><input id="target" inputmode="numeric" autocomplete="off"><span class="unit">元</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="span2" aria-labelledby="h-res" aria-live="polite">
+      <h2 id="h-res" class="res-title"><span class="step">3</span>試算結果</h2>
+      <div class="error" id="err" hidden></div>
+      <div class="results">
+        <div class="res be">
+          <div class="lbl">要打平（損益平衡點）</div>
+          <div class="big" id="beMonth">—</div>
+          <div class="sub">每天約 <b id="beDay">—</b></div>
+          <div class="formula">固定成本 ÷ 實際毛利率</div>
+        </div>
+        <div class="res tg">
+          <div class="lbl" id="tgLabel">要賺錢</div>
+          <div class="big" id="tgMonth">—</div>
+          <div class="sub">每天約 <b id="tgDay">—</b></div>
+          <div class="formula">（固定成本＋目標淨利）÷ 實際毛利率</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2" aria-labelledby="h-chart">
+      <h2 id="h-chart">營業額與淨利</h2>
+      <div class="chart-box" id="chart" role="img" aria-label="營業額與淨利關係圖"></div>
+      <div class="legend">
+        <span><i style="background:var(--loss-fill)"></i>虧損</span>
+        <span><i style="background:var(--gain-fill)"></i>獲利</span>
+        <span><i class="round" style="background:var(--mark-be)"></i>打平點</span>
+        <span><i class="round" style="background:var(--mark-tg)"></i>目標</span>
+        <span id="lgActual" hidden><i class="round" style="background:var(--mark-me)"></i>我的營業額</span>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-steps">
+      <h2 id="h-steps">計算過程</h2>
+      <ol class="calc" id="steps"></ol>
+    </section>
+
+    <section class="card" aria-labelledby="h-table">
+      <h2 id="h-table">想賺多少，要做到多少？</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>月淨利目標</th><th>月營業額</th><th>每天營業額</th></tr></thead>
+          <tbody id="table"></tbody>
+        </table>
+      </div>
+      <p class="hint">同樣的固定成本，營業額越高、淨利越多；固定成本不會馬上跟著增加。</p>
+    </section>
+
+    <section class="card span2" aria-labelledby="h-check">
+      <h2 id="h-check">檢查我的營業額（選填）</h2>
+      <label class="f" for="actual">目前或預估的月營業額</label>
+      <div class="input"><input id="actual" inputmode="numeric" autocomplete="off" placeholder="例如 400,000"><span class="unit">元</span></div>
+      <div class="check" id="checkBox" hidden><div class="head" id="checkHead"></div><div class="det" id="checkDet"></div></div>
+    </section>
+
+    <section class="card span2 remember" aria-labelledby="h-rem">
+      <h2 id="h-rem">記住兩個公式</h2>
+      <div class="f2">
+        <div><b>要打平</b>固定成本 ÷ 實際毛利率</div>
+        <div><b>要賺錢</b>（固定成本＋目標淨利）÷ 實際毛利率</div>
+      </div>
+      <p class="hint">實際毛利率＝產品毛利率－營業稅率（簡化算法）。損益平衡點：還沒賺錢，但也不再往外賠。</p>
+    </section>
+
+    <div class="span2 actions">
+      <button type="button" class="btn primary" id="copy">複製試算結果</button>
+      <button type="button" class="btn" id="example">套用範例數字</button>
+      <button type="button" class="btn" id="reset">全部清空</button>
+    </div>
+  </div>
+
+  <footer>AI 數位森林・損益平衡點試算｜結果僅供經營規劃參考，實際稅務請洽會計師。<br>輸入的數字只存在你自己的瀏覽器。</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  "use strict";
+  const STORE_KEY = "breakeven-calc-v1";
+  const EXAMPLE = {
+    costs: [
+      { name: "人事", amount: 140000 },
+      { name: "房租", amount: 40000 },
+      { name: "水電", amount: 20000 },
+    ],
+    margin: 68, invoice: true, tax: 5, days: 30, target: 100000, actual: null,
+  };
+  const EMPTY = { costs: [{ name: "人事", amount: null }, { name: "房租", amount: null }, { name: "水電", amount: null }], margin: null, invoice: true, tax: 5, days: 30, target: null, actual: null };
+
+  const $ = (id) => document.getElementById(id);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const num = (v) => {
+    const n = Number(String(v ?? "").replace(/[,，\s元%]/g, ""));
+    return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : null;
+  };
+  const fmt = (n) => Math.round(n).toLocaleString("zh-TW");
+  const money = (n) => `${fmt(n)} 元`;
+  const pct = (n) => `${+n.toFixed(2)}%`;
+  const wan = (n) => (n % 10000 === 0 ? `${n / 10000} 萬` : money(n));
+
+  let state;
+  try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || clone(EXAMPLE); } catch { state = clone(EXAMPLE); }
+  if (!state || !Array.isArray(state.costs)) state = clone(EXAMPLE);
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {} };
+
+  // 數字輸入框：輸入時只留數字，離開時加千分位
+  function bindNumber(input, get, set, { decimals = false } = {}) {
+    const show = () => { const v = get(); input.value = v == null ? "" : decimals ? String(v) : fmt(v); };
+    input.addEventListener("input", () => {
+      const cleaned = input.value.replace(decimals ? /[^\d.]/g : /[^\d]/g, "");
+      if (cleaned !== input.value.replace(/,/g, "")) input.value = cleaned;
+      set(num(cleaned)); save(); render();
+    });
+    input.addEventListener("focus", () => { const v = get(); input.value = v == null ? "" : String(v); input.select(); });
+    input.addEventListener("blur", show);
+    show();
+    return show;
+  }
+
+  function renderCosts() {
+    const box = $("costs");
+    box.innerHTML = "";
+    state.costs.forEach((c, i) => {
+      const row = document.createElement("div");
+      row.className = "cost-row";
+      row.innerHTML = `
+        <input class="name" id="cost-name-${i}" aria-label="項目名稱" maxlength="12" placeholder="項目">
+        <div class="input"><input id="cost-amt-${i}" aria-label="金額" inputmode="numeric" autocomplete="off" placeholder="0"><span class="unit">元</span></div>
+        <button type="button" class="icon-btn" aria-label="刪除這項">×</button>`;
+      const [name, amt] = row.querySelectorAll("input");
+      name.value = c.name || "";
+      name.addEventListener("input", () => { c.name = name.value; save(); render(); });
+      bindNumber(amt, () => c.amount, (v) => (c.amount = v));
+      row.querySelector("button").addEventListener("click", () => {
+        state.costs.splice(i, 1); save(); renderCosts(); render();
+      });
+      box.appendChild(row);
+    });
+  }
+  $("addCost").addEventListener("click", () => {
+    state.costs.push({ name: "", amount: null }); save(); renderCosts(); render();
+    const names = $("costs").querySelectorAll("input.name"); names[names.length - 1]?.focus();
+  });
+
+  const shows = [
+    bindNumber($("margin"), () => state.margin, (v) => (state.margin = v), { decimals: true }),
+    bindNumber($("tax"), () => state.tax, (v) => (state.tax = v), { decimals: true }),
+    bindNumber($("days"), () => state.days, (v) => (state.days = v)),
+    bindNumber($("target"), () => state.target, (v) => (state.target = v)),
+    bindNumber($("actual"), () => state.actual, (v) => (state.actual = v)),
+  ];
+  $("invoice").addEventListener("change", () => { state.invoice = $("invoice").checked; save(); render(); });
+
+  function compute() {
+    const fixed = state.costs.reduce((s, c) => s + (c.amount || 0), 0);
+    const margin = state.margin ?? 0;
+    const tax = state.invoice ? state.tax ?? 0 : 0;
+    const eff = margin - tax; // 簡化算法：毛利率 − 營業稅率
+    const days = state.days && state.days > 0 ? state.days : 30;
+    const target = state.target ?? 0;
+    const ok = eff > 0 && eff <= 100 && fixed > 0;
+    const r = eff / 100;
+    const be = ok ? fixed / r : null;
+    const tg = ok ? (fixed + target) / r : null;
+    return { fixed, margin, tax, eff, days, target, ok, r, be, tg };
+  }
+
+  function render() {
+    const c = compute();
+    $("invoice").checked = !!state.invoice;
+    $("taxBox").hidden = !state.invoice;
+    $("fixedTotal").textContent = money(c.fixed);
+    $("effMargin").textContent = pct(c.eff);
+    $("effHow").textContent = state.invoice ? `簡化算法：${pct(c.margin)} − 營業稅 ${pct(c.tax)} ＝ ${pct(c.eff)}` : `沒開發票：實際毛利率＝產品毛利率 ${pct(c.margin)}`;
+
+    let msg = "";
+    if (c.fixed <= 0) msg = "請先輸入每月固定成本。";
+    else if (state.margin == null) msg = "請輸入產品毛利率。";
+    else if (c.eff <= 0) msg = "實際毛利率小於或等於 0：每賣一筆都在賠錢，營業額再高也打不平。請檢查毛利率。";
+    else if (c.eff > 100) msg = "毛利率不能超過 100%。";
+    $("err").textContent = msg;
+    $("err").hidden = !msg;
+
+    $("beMonth").textContent = c.ok ? `${fmt(c.be)} 元／月` : "—";
+    $("beDay").textContent = c.ok ? money(c.be / c.days) : "—";
+    $("tgLabel").textContent = c.target > 0 ? `想再賺 ${wan(c.target)}` : "要賺錢（請輸入目標淨利）";
+    $("tgMonth").textContent = c.ok ? `${fmt(c.tg)} 元／月` : "—";
+    $("tgDay").textContent = c.ok ? money(c.tg / c.days) : "—";
+
+    renderSteps(c);
+    renderTable(c);
+    renderCheck(c);
+    renderChart(c);
+  }
+
+  function renderSteps(c) {
+    const items = state.costs.filter((x) => x.amount);
+    const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+    const parts = items.map((x) => `${esc(x.name || "其他")} ${fmt(x.amount)}`).join(" ＋ ");
+    const li = (eq, why) => `<li><span class="eq">${eq}</span>${why ? `<span class="why">${why}</span>` : ""}</li>`;
+    let html = li(`固定成本：${parts || "0"} ＝ ${money(c.fixed)}`, "每月不論賣多少都要付的錢");
+    html += li(
+      state.invoice ? `實際毛利率：${pct(c.margin)} − ${pct(c.tax)} ＝ ${pct(c.eff)}` : `實際毛利率：${pct(c.eff)}`,
+      state.invoice ? "有開發票要扣營業稅（簡化算法）" : "沒開發票，不扣營業稅"
+    );
+    if (c.ok) {
+      html += li(`打平：${fmt(c.fixed)} ÷ ${pct(c.eff)} ≈ ${money(c.be)}／月`, `再 ÷ ${c.days} 天，每天大約要做到 ${money(c.be / c.days)}`);
+      if (c.target > 0) html += li(`賺 ${wan(c.target)}：（${fmt(c.fixed)} ＋ ${fmt(c.target)}）÷ ${pct(c.eff)} ≈ ${money(c.tg)}／月`, `每天大約要做到 ${money(c.tg / c.days)}`);
+    }
+    $("steps").innerHTML = html;
+  }
+
+  function renderTable(c) {
+    const body = $("table");
+    if (!c.ok) { body.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted)">輸入固定成本與毛利率後顯示</td></tr>`; return; }
+    const list = [...new Set([0, 50000, 80000, 100000, 120000, 150000, c.target].filter((v) => v >= 0))].sort((a, b) => a - b);
+    body.innerHTML = list.map((t) => {
+      const rev = (c.fixed + t) / c.r;
+      const cls = t === 0 ? "zero" : t === c.target ? "hl" : "";
+      return `<tr class="${cls}"><td>${t === 0 ? "打平（0）" : wan(t)}${t === c.target && t ? "（你的目標）" : ""}</td><td>${fmt(rev)}</td><td>${fmt(rev / c.days)}</td></tr>`;
+    }).join("");
+  }
+
+  function renderCheck(c) {
+    const box = $("checkBox");
+    const a = state.actual;
+    if (!c.ok || !a) { box.hidden = true; $("lgActual").hidden = true; return; }
+    box.hidden = false;
+    $("lgActual").hidden = false;
+    const profit = a * c.r - c.fixed;
+    const gap = c.be - a;
+    if (profit < 0) {
+      box.className = "check loss";
+      $("checkHead").textContent = `每月約虧 ${money(-profit)}`;
+      $("checkDet").textContent = `距離打平還差 ${money(gap)}／月（每天再多 ${money(gap / c.days)}）。`;
+    } else {
+      box.className = "check ok";
+      const safety = ((a - c.be) / a) * 100;
+      const toTarget = c.tg - a;
+      $("checkHead").textContent = `每月約賺 ${money(profit)}`;
+      $("checkDet").textContent =
+        `已超過打平點 ${money(-gap)}，營業額掉 ${pct(safety)} 以內都還不會虧。` +
+        (c.target > 0 ? (toTarget > 0 ? ` 距離目標淨利還差營業額 ${money(toTarget)}／月。` : " 已達成目標淨利。") : "");
+    }
+  }
+
+  // 圖表：橫軸月營業額、縱軸月淨利；依實際寬度畫，手機上字也清楚
+  function renderChart(c) {
+    const box = $("chart");
+    if (!c.ok) { box.innerHTML = `<p class="hint" style="text-align:center;padding:40px 0">輸入固定成本與毛利率後顯示</p>`; return; }
+    const W = Math.max(300, Math.round(box.clientWidth || 640));
+    const H = W < 520 ? 300 : 360, L = W < 520 ? 58 : 74, R = 16, T = 26, B = 48;
+    const xMax = niceCeil(Math.max(c.tg, c.be, state.actual || 0) * 1.2);
+    const yMin = -c.fixed, yMaxRaw = xMax * c.r - c.fixed;
+    const yMax = Math.max(yMaxRaw, c.target * 1.1, c.fixed * 0.2);
+    const x = (v) => L + (v / xMax) * (W - L - R);
+    const y = (v) => T + ((yMax - v) / (yMax - yMin)) * (H - T - B);
+    const pY = (rev) => y(rev * c.r - c.fixed);
+    const short = (v) => (Math.abs(v) >= 10000 ? `${+(v / 10000).toFixed(1)}萬` : fmt(v));
+    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="inherit">`;
+    s += `<polygon class="c-loss" points="${x(0)},${y(0)} ${x(0)},${pY(0)} ${x(c.be)},${y(0)}"/>`;
+    s += `<polygon class="c-gain" points="${x(c.be)},${y(0)} ${x(xMax)},${pY(xMax)} ${x(xMax)},${y(0)}"/>`;
+    for (let i = 0; i <= 4; i++) {
+      const v = (xMax / 4) * i;
+      s += `<line class="c-grid" x1="${x(v)}" y1="${T}" x2="${x(v)}" y2="${H - B}"/>`;
+      s += `<text class="c-tick" x="${x(v)}" y="${H - B + 20}" font-size="13" text-anchor="middle">${short(v)}</text>`;
+    }
+    [yMin, 0, yMax].forEach((v) => {
+      s += `<text class="c-tick" x="${L - 8}" y="${y(v) + 4}" font-size="13" text-anchor="end">${short(v)}</text>`;
+    });
+    s += `<text class="c-tick" x="${(L + W - R) / 2}" y="${H - 6}" font-size="13" text-anchor="middle">月營業額（元）</text>`;
+    s += `<text class="c-tick" x="14" y="${(T + H - B) / 2}" font-size="13" text-anchor="middle" transform="rotate(-90 14 ${(T + H - B) / 2})">月淨利（元）</text>`;
+    s += `<line class="c-zero" x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}" stroke-width="1.5" stroke-dasharray="6 5"/>`;
+    s += `<line class="c-line" x1="${x(0)}" y1="${pY(0)}" x2="${x(xMax)}" y2="${pY(xMax)}" stroke-width="3.5" stroke-linecap="round"/>`;
+    const lbl = (tx, ty, cls, text, anchor) => `<text class="c-lbl ${cls}" x="${tx}" y="${ty}" font-size="13.5" text-anchor="${anchor}">${text}</text>`;
+    const pt = (cx, cy, cls) => `<circle class="c-dot ${cls}" cx="${cx}" cy="${cy}" r="7.5"/>`;
+    // 我的營業額：直的虛線到橫軸，標籤在橫軸上方，避開其他標籤
+    if (state.actual) {
+      const ax = x(state.actual), ay = pY(state.actual);
+      const anchor = ax > W - 110 ? "end" : ax < L + 60 ? "start" : "middle";
+      s += `<line class="c-me-line" x1="${ax}" y1="${ay}" x2="${ax}" y2="${H - B}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+      s += lbl(ax, H - B - 10, "c-me", `我的 ${short(state.actual)}`, anchor);
+    }
+    const bx = x(c.be), by = y(0);
+    s += lbl(Math.min(bx + 12, W - R - 90), by + 24, "c-be", `打平 ${short(c.be)}`, "start");
+    if (c.target > 0) s += lbl(x(c.tg) - 12, pY(c.tg) - 12, "c-tg", `賺 ${short(c.target)}：${short(c.tg)}`, "end");
+    if (state.actual) s += pt(x(state.actual), pY(state.actual), "c-me");
+    s += pt(bx, by, "c-be");
+    if (c.target > 0) s += pt(x(c.tg), pY(c.tg), "c-tg");
+    s += `</svg>`;
+    box.innerHTML = s;
+  }
+  function niceCeil(v) {
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
+    return 10 * p;
+  }
+
+  // 按鈕
+  const toast = (t) => { const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 1800); };
+  const applyState = (s) => { state = clone(s); save(); renderCosts(); shows.forEach((f) => f()); render(); };
+  $("example").addEventListener("click", () => { applyState(EXAMPLE); toast("已套用範例數字"); });
+
+  // 清空：按第一次變成確認，3 秒內再按一次才清空
+  let resetArmed = false, resetTimer;
+  $("reset").addEventListener("click", () => {
+    const btn = $("reset");
+    if (!resetArmed) {
+      resetArmed = true; btn.textContent = "再按一次確認清空"; btn.classList.add("warn");
+      resetTimer = setTimeout(() => { resetArmed = false; btn.textContent = "全部清空"; btn.classList.remove("warn"); }, 3000);
+      return;
+    }
+    clearTimeout(resetTimer); resetArmed = false; btn.textContent = "全部清空"; btn.classList.remove("warn");
+    applyState(EMPTY); toast("已清空");
+  });
+
+  $("copy").addEventListener("click", () => {
+    const c = compute();
+    if (!c.ok) return toast("請先完成輸入");
+    const lines = [
+      "【損益平衡點試算】",
+      `固定成本：${money(c.fixed)}／月（${state.costs.filter((x) => x.amount).map((x) => `${x.name || "其他"} ${fmt(x.amount)}`).join("、")}）`,
+      `實際毛利率：${pct(c.eff)}${state.invoice ? `（毛利率 ${pct(c.margin)} − 營業稅 ${pct(c.tax)}）` : ""}`,
+      `要打平：${money(c.be)}／月，每天約 ${money(c.be / c.days)}（以 ${c.days} 天計）`,
+    ];
+    if (c.target > 0) lines.push(`想賺 ${wan(c.target)}：${money(c.tg)}／月，每天約 ${money(c.tg / c.days)}`);
+    if (state.actual) { const p = state.actual * c.r - c.fixed; lines.push(`目前營業額 ${money(state.actual)}：每月約${p < 0 ? "虧" : "賺"} ${money(Math.abs(p))}`); }
+    const text = lines.join("\n");
+    const fallback = () => {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch {}
+      ta.remove(); toast(ok ? "已複製" : "無法自動複製，請手動選取文字");
+    };
+    try { navigator.clipboard.writeText(text).then(() => toast("已複製，可以貼到 LINE 或筆記"), fallback); }
+    catch { fallback(); }
+  });
+
+  let lastW = 0;
+  window.addEventListener("resize", () => {
+    const w = $("chart").clientWidth;
+    if (w !== lastW) { lastW = w; renderChart(compute()); }
+  });
+
+  renderCosts();
+  render();
+})();
+</script>

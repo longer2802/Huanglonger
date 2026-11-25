@@ -35,8 +35,9 @@ npm run icons   # 改了 icons/icon.svg 才需要（需要 Playwright）
 npm run build   # 產出 release/breakeven.html
 ```
 
-## 已上架（Base44）
-- 網址：https://app-0d6e7919.base44.app （免登入、允許嵌入其他網站）
-- Base44 App ID：`6b06855cb8eef5080d6e7919`，頁面檔案為 `public/index.html`
-- Base44 版的圖示改用媒體庫網址：https://media.base44.com/images/public/6b06855cb8eef5080d6e7919/a7322f2cad473a317492f3e61bdc6d29_breakeven-icon-512.png
-- 嵌入平台：`<iframe src="https://app-0d6e7919.base44.app" ...>`，自動高度的寫法同上
+## 已上架（Claude 網頁）
+- 網址：https://claude.ai/artifact/VuCNijZrF1tNk2fZsmBBQr （預設只有擁有者能開，分享請用頁面的「Share」）
+- 原始碼：`src/artifact.html`（圖示位置為 `{{ICON_192}}`），發布檔：`release/breakeven-claude.html`
+- 與 `src/app.html` 的差異：支援深色模式、拿掉列印按鈕（Claude 網頁不能開列印視窗）、清空改為按兩次確認
+
+> 先前曾放在 Base44（app-0d6e7919），依使用者要求改為 Claude 網頁；這個 App 不使用 Base44。
