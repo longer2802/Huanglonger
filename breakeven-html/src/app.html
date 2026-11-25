@@ -367,8 +367,8 @@
     $("invoice").checked = !!state.invoice;
     $("taxBox").style.display = state.invoice ? "" : "none";
     $("fixedTotal").textContent = money(c.fixed);
-    $("effMargin").textContent = pct(c.eff);
-    $("effHow").textContent = state.invoice ? `簡化算法：${pct(c.margin)} − 營業稅 ${pct(c.tax)} ＝ ${pct(c.eff)}` : `沒開發票：實際毛利率＝產品毛利率 ${pct(c.margin)}`;
+    $("effMargin").textContent = state.margin == null ? "—" : pct(c.eff);
+    $("effHow").textContent = state.margin == null ? "填入產品毛利率後自動計算" : state.invoice ? `簡化算法：${pct(c.margin)} − 營業稅 ${pct(c.tax)} ＝ ${pct(c.eff)}` : `沒開發票：實際毛利率＝產品毛利率 ${pct(c.margin)}`;
 
     const err = $("err");
     let msg = "";
