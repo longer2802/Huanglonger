@@ -13,3 +13,6 @@ Packages/MenuScannerKit/.swiftpm/
 xcuserdata/
 .DS_Store
 Benchmarks/results/
+Benchmarks/private/
+Benchmarks/answers/*.draft.csv
+Benchmarks/**/answers/*.draft.csv

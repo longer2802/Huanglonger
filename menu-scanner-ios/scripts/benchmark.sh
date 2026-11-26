@@ -8,8 +8,13 @@
 #   讀 Benchmarks/holdout/menus＋answers，報告寫到 Benchmarks/results/holdout/，
 #   並在 Benchmarks/holdout/RUNS.md 記錄時間與規則版本（git commit）。
 #   已經跑過時會拒絕，除非加 --force（會在紀錄中註明重跑）。
+#
+# 資料夾：預設 Benchmarks/；真實菜單不想放進公開 repo 時放在 Benchmarks/private/（已 gitignore），
+#   BENCH_ROOT=Benchmarks/private scripts/benchmark.sh
+# 產生標準答案草稿（只處理還沒有答案的圖）：scripts/benchmark.sh --draft
 set -euo pipefail
 cd "$(dirname "$0")/.."
+BASE="$PWD/${BENCH_ROOT:-Benchmarks}"
 
 HOLDOUT=0
 FORCE=0
@@ -23,11 +28,11 @@ for a in "$@"; do
 done
 
 if [ "$HOLDOUT" = 1 ]; then
-  ROOT="$PWD/Benchmarks/holdout"
-  OUT="$PWD/Benchmarks/results/holdout"
+  ROOT="$BASE/holdout"
+  OUT="$BASE/results/holdout"
   LOG="$ROOT/RUNS.md"
   if [ ! -d "$ROOT/menus" ] || [ -z "$(ls -A "$ROOT/menus" 2>/dev/null)" ]; then
-    echo "Benchmarks/holdout/menus 是空的：請先執行 python3 Benchmarks/tools/split_holdout.py" >&2
+    echo "Benchmarks/holdout/menus 是空的：請先執行 python3 Benchmarks/tools/split_holdout.py --root $BASE" >&2
     exit 1
   fi
   if [ -f "$LOG" ] && grep -q "正式驗收" "$LOG" && [ "$FORCE" != 1 ]; then
@@ -44,8 +49,8 @@ if [ "$HOLDOUT" = 1 ]; then
     printf -- '- %s　正式驗收%s　規則版本 %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$([ "$FORCE" = 1 ] && echo '（重跑）')" "$COMMIT"
   } >> "$LOG"
 else
-  ROOT="$PWD/Benchmarks"
-  OUT="$PWD/Benchmarks/results"
+  ROOT="$BASE"
+  OUT="$BASE/results"
 fi
 
 swift run -c release --package-path Packages/MenuScannerKit menu-benchmark \

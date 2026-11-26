@@ -1,0 +1,125 @@
+name: menu-scanner-ios
+
+# 菜單掃描器：在 macOS（有 Xcode、iOS 模擬器、Apple Vision）上編譯、測試、跑基準測試。
+# - 推到 claude/menu-scanner-* 或 main 且動到 menu-scanner-ios/ 時自動執行。
+# - commit 訊息含 [holdout] 時，另外執行一次 holdout 正式驗收。
+on:
+  push:
+    branches: ["claude/menu-scanner-**", "main"]
+    paths:
+      - "menu-scanner-ios/**"
+      - ".github/workflows/menu-scanner.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: menu-scanner-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: menu-scanner-ios
+
+jobs:
+  core-tests:
+    name: 解析器單元測試（swift test）
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -version && swift --version
+      - name: swift test
+        run: swift test --package-path Packages/MenuScannerKit 2>&1 | tee core-tests.log
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-tests-log
+          path: menu-scanner-ios/core-tests.log
+
+  app-tests:
+    name: App 編譯＋模擬器測試（含 UI 截圖）
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝 XcodeGen
+        run: brew install xcodegen
+      - name: 可用模擬器
+        run: xcrun simctl list devices available | grep -i iphone | head -20
+      - name: scripts/test.sh
+        run: |
+          set +e
+          scripts/test.sh > app-tests.log 2>&1
+          status=$?
+          grep -E "error:|Test Case .*(passed|failed|skipped)|Executed|\*\* TEST|XCTSkip|示範圖辨識結果" app-tests.log | tail -300
+          tail -40 app-tests.log
+          exit $status
+      - name: 失敗摘要
+        if: failure()
+        run: grep -nE "error:|failed|XCTAssert" app-tests.log | head -120 || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-tests-screenshots
+          path: |
+            menu-scanner-ios/build/screenshots
+            menu-scanner-ios/app-tests.log
+      - if: always()
+        run: cd build && zip -qr TestResults.xcresult.zip TestResults.xcresult || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-tests-xcresult
+          path: menu-scanner-ios/build/TestResults.xcresult.zip
+
+  benchmark:
+    name: 基準測試（調整組，不含 holdout）
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: scripts/benchmark.sh
+        run: scripts/benchmark.sh
+      - name: 報告
+        if: always()
+        run: |
+          cat Benchmarks/results/latest.md || true
+          cat Benchmarks/results/latest.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: menu-scanner-ios/Benchmarks/results
+
+  holdout:
+    name: holdout 正式驗收（commit 訊息含 [holdout] 才執行）
+    if: contains(github.event.head_commit.message, '[holdout]')
+    needs: [core-tests]
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: 確認尚未正式驗收過
+        run: |
+          if [ -f Benchmarks/holdout/RUNS.md ] && grep -q "正式驗收" Benchmarks/holdout/RUNS.md \
+             && ! echo "${{ github.event.head_commit.message }}" | grep -q "\[holdout-force\]"; then
+            echo "::error::holdout 已正式驗收過（Benchmarks/holdout/RUNS.md）。確定要重跑請在 commit 訊息加 [holdout-force]。"
+            exit 1
+          fi
+      - name: scripts/benchmark.sh --holdout
+        run: scripts/benchmark.sh --holdout --force
+      - name: 報告
+        if: always()
+        run: |
+          cat Benchmarks/holdout/RUNS.md || true
+          cat Benchmarks/results/holdout/latest.md || true
+          cat Benchmarks/results/holdout/latest.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: holdout-report
+          path: |
+            menu-scanner-ios/Benchmarks/results/holdout
+            menu-scanner-ios/Benchmarks/holdout/RUNS.md

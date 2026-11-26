@@ -7,7 +7,7 @@
 - 抽樣以檔名雜湊排序，結果固定、可重現；不依賴亂數。
 - holdout 已有內容時拒絕重新分割（避免看過結果後換一批）。
 
-用法：python3 Benchmarks/tools/split_holdout.py [--dry-run]
+用法：python3 Benchmarks/tools/split_holdout.py [--dry-run] [--root Benchmarks/private]
 """
 import argparse
 import csv
@@ -20,6 +20,12 @@ from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOLD = os.path.join(ROOT, "holdout")
+
+
+def set_root(path):
+    global ROOT, HOLD
+    ROOT = os.path.abspath(path)
+    HOLD = os.path.join(ROOT, "holdout")
 FIELDS = ["檔名", "版型", "用途", "來源"]
 
 
@@ -46,7 +52,10 @@ def write_manifest(path, rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--root", help="基準資料夾（預設 Benchmarks；私有菜單可用 Benchmarks/private）")
     args = ap.parse_args()
+    if args.root:
+        set_root(args.root)
 
     if os.path.isdir(os.path.join(HOLD, "menus")) and os.listdir(os.path.join(HOLD, "menus")):
         sys.exit("Benchmarks/holdout/menus 已有菜單：不重新分割。要重來請先人工確認並移回。")
