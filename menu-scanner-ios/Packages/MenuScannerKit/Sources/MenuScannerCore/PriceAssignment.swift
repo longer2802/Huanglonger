@@ -187,14 +187,19 @@ enum EntryFactory {
 enum Gutters {
     typealias Band = (lo: Double, hi: Double)
 
-    static func bands(from spans: [(Double, Double)], minGap: Double, resolution: Int = 1000) -> [Band] {
+    /// - Parameter noiseFraction: 覆蓋數不超過「最大覆蓋數 × 這個比例」的位置視為空白，
+    ///   避免一兩個跨欄字塊（底部搜尋列、英文副標）把兩欄連在一起。品項少時（最大覆蓋數 < 12）不啟用。
+    static func bands(from spans: [(Double, Double)], minGap: Double, resolution: Int = 1000, noiseFraction: Double = 0.08) -> [Band] {
         guard !spans.isEmpty else { return [(lo: 0, hi: 1)] }
-        var covered = [Bool](repeating: false, count: resolution)
+        var counts = [Int](repeating: 0, count: resolution)
         for (a, b) in spans {
             let lo = max(0, min(resolution - 1, Int(a * Double(resolution))))
             let hi = max(lo, min(resolution - 1, Int(b * Double(resolution))))
-            for i in lo...hi { covered[i] = true }
+            for i in lo...hi { counts[i] += 1 }
         }
+        let maxCount = counts.max() ?? 0
+        let noise = maxCount >= 12 ? Int(Double(maxCount) * noiseFraction) : 0
+        let covered = counts.map { $0 > noise }
         var runs: [(Int, Int)] = []
         var i = 0
         while i < resolution {

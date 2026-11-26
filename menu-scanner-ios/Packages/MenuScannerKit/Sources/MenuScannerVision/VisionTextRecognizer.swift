@@ -58,6 +58,21 @@ public enum VisionImageTools {
         return CIContext().createCGImage(output, from: input.extent)
     }
 
+    /// 長邊小於 2400 像素時放大到約 3000（最多 3 倍），讓 Vision 讀得到小字。
+    public static func upscaledIfSmall(_ image: CGImage, minLongSide: Int = 2400, target: Double = 3000) -> CGImage {
+        let longest = max(image.width, image.height)
+        guard longest > 0, longest < minLongSide else { return image }
+        let scale = min(3.0, target / Double(longest))
+        let w = Int((Double(image.width) * scale).rounded()), h = Int((Double(image.height) * scale).rounded())
+        guard let ctx = CGContext(
+            data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ) else { return image }
+        ctx.interpolationQuality = .high
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage() ?? image
+    }
+
     /// 從檔案讀圖並依 EXIF 方向轉正，長邊最多 `maxPixelSize`（基準測試工具使用）。
     public static func loadUpright(url: URL, maxPixelSize: Int = 4096) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
@@ -86,12 +101,16 @@ public struct VisionTextRecognizer: TextRecognizing {
         if enhanceContrast, let enhanced = VisionImageTools.enhanceContrast(work) {
             work = enhanced
         }
+        // 截圖、遠拍的小字：先放大（正規化座標不受影響）
+        work = VisionImageTools.upscaledIfSmall(work)
 
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.revision = VNRecognizeTextRequest.currentRevision
         // 不做語言校正：保留原始文字，價格數字也不會被「修正」。
         request.usesLanguageCorrection = false
+        // 預設只辨識高度約圖高 1/32 以上的字；整張菜單的字常只有 1% 左右
+        request.minimumTextHeight = 0.004
         let supported = (try? request.supportedRecognitionLanguages()) ?? []
         request.recognitionLanguages = OCRLanguagePolicy.select(from: supported)
         #if targetEnvironment(simulator)

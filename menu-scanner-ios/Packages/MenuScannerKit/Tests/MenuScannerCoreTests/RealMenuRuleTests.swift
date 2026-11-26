@@ -91,4 +91,30 @@ final class RealMenuRuleTests: XCTestCase {
         XCTAssertEqual(r.entries.first { $0.name == "紅茶拿鐵" }?.category, "鮮奶系列")
         XCTAssertTrue(r.pendingEntries.allSatisfy { $0.reasons.contains(.addonOrPromotion) }, "\(r.pendingEntries.map(\.name))")
     }
+
+    /// 截圖底部的搜尋列、英文副標等單一字塊跨過欄間空白時，左右欄仍要分開。
+    func testStrayBridgingTextDoesNotMergeColumns() {
+        var f = MenuFixture()
+        let left = ["紅茶", "綠茶", "青茶", "烏龍", "奶茶", "可可", "多多", "梅綠", "檸紅", "柚綠", "桔茶", "麥茶", "冬瓜", "鐵觀音"]
+        let right = ["拿鐵", "可可奶", "紅拿", "綠拿", "奶綠", "芋奶", "布丁奶", "椰奶", "仙草奶", "豆奶", "烏拿", "鐵拿", "玫拿", "蜜拿"]
+        for (i, n) in left.enumerated() {
+            f.add(n, x: 0.05, y: 0.05 + Double(i) * 0.05, h: 0.02)
+            f.add("30", x: 0.30, y: 0.05 + Double(i) * 0.05, h: 0.02)
+        }
+        for (i, n) in right.enumerated() {
+            f.add(n, x: 0.50, y: 0.05 + Double(i) * 0.05, h: 0.02)
+            f.add("40", x: 0.80, y: 0.05 + Double(i) * 0.05, h: 0.02)
+        }
+        f.add("Q麻古茶坊 屏東林森", x: 0.20, y: 0.80, h: 0.02, w: 0.34)
+        let r = f.parse()
+        XCTAssertEqual(r.resolvedEntries.filter { $0.price == 30 }.map(\.name), left)
+        XCTAssertEqual(r.resolvedEntries.filter { $0.price == 40 }.map(\.name), right)
+    }
+
+    func testIconPrefixesAreStripped() {
+        XCTAssertEqual(NameCleaner.cleanName("@楊枝甘露2.0"), "楊枝甘露2.0")
+        XCTAssertEqual(NameCleaner.cleanName("@ 紅茶拿鐵"), "紅茶拿鐵")
+        XCTAssertEqual(NameCleaner.cleanName("a 柳橙芒果果粒茶"), "柳橙芒果果粒茶")
+        XCTAssertEqual(NameCleaner.cleanName("Latte"), "Latte")
+    }
 }

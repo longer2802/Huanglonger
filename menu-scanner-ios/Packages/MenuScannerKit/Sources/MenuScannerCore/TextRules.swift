@@ -192,7 +192,7 @@ public struct TypoLexicon: Codable, Hashable, Sendable {
 
 enum NameCleaner {
     static let hanSpace = Pattern(#"(?<=[\p{Han}])\s+(?=[\p{Han}])"#)
-    static let leadingMarker = Pattern(#"^(?:[0-9]{1,2}\s*[.、)]|[•·●○◎★☆▲△■□◆◇►▶➤])\s*"#)
+    static let leadingMarker = Pattern(#"^(?:[0-9]{1,2}\s*[.、)]|[•·●○◎★☆▲△■□◆◇►▶➤@®©*#]|[A-Za-z](?=\s*[\p{Han}]))\s*"#)
     static let trailingCurrency = Pattern(#"\s*(?:NT\$?|NTD|\$)$"#, caseInsensitive: true)
     static let edgeJunk = Pattern(#"^[\s.:…·,，、|/\\\-~+]+|[\s.:…·,，、|/\\\-~+]+$"#)
     static let spaces = Pattern(#"\s{2,}"#)
