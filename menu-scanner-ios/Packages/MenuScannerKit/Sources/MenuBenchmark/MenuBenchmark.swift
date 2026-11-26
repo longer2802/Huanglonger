@@ -21,6 +21,7 @@ struct BenchmarkCommand {
         var only: String?
         var draft = false
         var dump = false
+        var ocr = VisionTextRecognizer.Options()
         var args = CommandLine.arguments.dropFirst().makeIterator()
         while let a = args.next() {
             switch a {
@@ -29,8 +30,11 @@ struct BenchmarkCommand {
             case "--only": only = args.next()
             case "--draft": draft = true
             case "--dump": dump = true
+            case "--ocr-correction": ocr.languageCorrection = true
+            case "--tiles": if let v = args.next(), let n = Int(v) { ocr.tiles = max(1, min(4, n)) }
             case "-h", "--help":
                 print("用法：menu-benchmark [--root Benchmarks] [--out Benchmarks/results] [--only 檔名關鍵字] [--draft]")
+                print("  --ocr-correction：開啟 Vision 語言校正；--tiles N：切成 N×N 區塊辨識（OCR 實驗用）")
                 print("  --dump：把原始 OCR 行（座標與文字）寫到 <out>/ocr/<檔名>.txt")
                 print("  --draft：替還沒有標準答案的圖產生 answers/<檔名>.draft.csv，人工對照原圖修正後改名為 <檔名>.csv")
                 return
@@ -54,7 +58,8 @@ struct BenchmarkCommand {
         }
 
         var results: [BenchmarkImageResult] = []
-        let recognizer = VisionTextRecognizer()
+        let recognizer = VisionTextRecognizer(options: ocr)
+        print("OCR 設定：\(ocr.label)")
         for file in files {
             let base = (file as NSString).deletingPathExtension
             let m = manifest[file] ?? ManifestEntry.fallback(file: file)

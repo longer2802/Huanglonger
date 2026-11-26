@@ -90,6 +90,17 @@ jobs:
           done
           cat Benchmarks/results/latest.md || true
           cat Benchmarks/results/latest.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: OCR 設定實驗（只跑真實菜單，比較正確數）
+        if: always()
+        continue-on-error: true
+        run: |
+          for opts in "--ocr-correction" "--tiles 2" "--tiles 2 --ocr-correction" "--tiles 3"; do
+            echo "=== $opts ==="
+            swift run -c release --package-path Packages/MenuScannerKit menu-benchmark \
+              --root "$PWD/Benchmarks" --out "$PWD/Benchmarks/results/exp" --only 麻古 --dump $opts \
+              | grep -E "OCR 設定|正確 [0-9]|多抓：" | head -40
+            f=$(ls Benchmarks/results/exp/ocr/*.txt | head -1); echo "--- OCR（前 60 行）"; head -60 "$f"
+          done
       - if: always()
         uses: actions/upload-artifact@v4
         with:

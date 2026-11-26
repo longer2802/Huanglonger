@@ -87,9 +87,30 @@ public enum VisionImageTools {
 
 /// Apple Vision 文字辨識（完全在裝置上執行，不連網）。
 public struct VisionTextRecognizer: TextRecognizing {
-    public init() {}
+    public struct Options: Sendable, Equatable {
+        /// Vision 語言校正（可能修正錯字，也可能改動數字；預設關閉）。
+        public var languageCorrection: Bool
+        /// 整張辨識時切成 tiles×tiles 個有重疊的區塊分別辨識（小字較易讀到）；1 為不切。
+        public var tiles: Int
+
+        public init(languageCorrection: Bool = false, tiles: Int = 1) {
+            self.languageCorrection = languageCorrection
+            self.tiles = tiles
+        }
+
+        public var label: String { "校正\(languageCorrection ? "開" : "關")・分塊 \(tiles)×\(tiles)" }
+    }
+
+    public var options: Options
+
+    public init(options: Options = Options()) {
+        self.options = options
+    }
 
     public func recognize(_ image: CGImage, region: NormRect?, enhanceContrast: Bool, lineIDOffset: Int = 0) async throws -> OCRDocument {
+        if region == nil, options.tiles > 1 {
+            return try await recognizeTiled(image, enhanceContrast: enhanceContrast, lineIDOffset: lineIDOffset)
+        }
         let started = Date()
         var work = image
         var crop = NormRect.unit
@@ -108,7 +129,7 @@ public struct VisionTextRecognizer: TextRecognizing {
         request.recognitionLevel = .accurate
         request.revision = VNRecognizeTextRequest.currentRevision
         // 不做語言校正：保留原始文字，價格數字也不會被「修正」。
-        request.usesLanguageCorrection = false
+        request.usesLanguageCorrection = options.languageCorrection
         // 預設只辨識高度約圖高 1/32 以上的字；整張菜單的字常只有 1% 左右
         request.minimumTextHeight = 0.004
         let supported = (try? request.supportedRecognitionLanguages()) ?? []
@@ -165,6 +186,58 @@ public struct VisionTextRecognizer: TextRecognizing {
             languages: request.recognitionLanguages,
             revision: request.revision,
             processingSeconds: Date().timeIntervalSince(started)
+        )
+    }
+
+    /// 分塊辨識：各塊結果換回整張座標後合併；重疊區的重複行保留較完整的一行。
+    func recognizeTiled(_ image: CGImage, enhanceContrast: Bool, lineIDOffset: Int) async throws -> OCRDocument {
+        let started = Date()
+        let n = options.tiles
+        let overlap = 0.06
+        var single = self
+        single.options.tiles = 1
+        var all: [OCRLine] = []
+        var languages: [String] = []
+        var revision = 0
+        for row in 0..<n {
+            for col in 0..<n {
+                let w = 1.0 / Double(n), h = 1.0 / Double(n)
+                let tile = NormRect(
+                    x: max(0, Double(col) * w - overlap), y: max(0, Double(row) * h - overlap),
+                    width: min(1, w + overlap * 2), height: min(1, h + overlap * 2)
+                ).clamped
+                do {
+                    let doc = try await single.recognize(image, region: tile, enhanceContrast: enhanceContrast, lineIDOffset: 0)
+                    all += doc.lines
+                    languages = doc.languages
+                    revision = doc.revision
+                } catch OCRError.noReadableText {
+                    continue
+                }
+            }
+        }
+        // 去重：較短的行若大半落在另一行裡，視為被切斷的重複
+        all.sort { $0.text.count > $1.text.count }
+        var kept: [OCRLine] = []
+        for l in all {
+            let area = l.box.width * l.box.height
+            let dup = kept.contains { k in
+                let ix = max(0, min(k.box.maxX, l.box.maxX) - max(k.box.minX, l.box.minX))
+                let iy = max(0, min(k.box.maxY, l.box.maxY) - max(k.box.minY, l.box.minY))
+                return area > 0 && ix * iy / area > 0.6
+            }
+            if !dup { kept.append(l) }
+        }
+        kept.sort { ($0.box.minY, $0.box.minX) < ($1.box.minY, $1.box.minX) }
+        let lines = kept.enumerated().map { i, l -> OCRLine in
+            var c = l
+            c.id = lineIDOffset + i
+            return c
+        }
+        if lines.isEmpty { throw OCRError.noReadableText }
+        return OCRDocument(
+            lines: lines, imageWidth: image.width, imageHeight: image.height, region: nil,
+            languages: languages, revision: revision, processingSeconds: Date().timeIntervalSince(started)
         )
     }
 
