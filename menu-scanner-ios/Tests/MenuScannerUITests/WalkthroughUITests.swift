@@ -147,8 +147,13 @@ final class LibraryUITests: XCTestCase {
         edit.tap()
 
         XCTAssertTrue(app.buttons["entryRow"].firstMatch.waitForExistence(timeout: 5))
-        app.buttons["reviewMenu"].tap()
-        app.buttons["saveToLibrary"].tap()
+        // 導覽列按鈕：直接點座標（XCUITest 對導覽列項目的「捲動到可見」偶爾失敗）
+        let menu = app.buttons["reviewMenu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let save = app.buttons["saveToLibrary"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        save.tap()
         // 回到店家頁，應有第 2 版
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
