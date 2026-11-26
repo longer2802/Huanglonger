@@ -1,0 +1,14 @@
+# XcodeGen 產生的檔案（用 xcodegen generate 重建，不要手改）
+MenuScanner.xcodeproj/
+App/Info.plist
+
+# 建置產物
+.build/
+DerivedData/
+build/
+*.xcresult
+.swiftpm/
+Packages/MenuScannerKit/.build/
+Packages/MenuScannerKit/.swiftpm/
+xcuserdata/
+.DS_Store

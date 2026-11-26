@@ -1,0 +1,70 @@
+name: MenuScanner
+options:
+  bundleIdPrefix: tw.local.menuscanner
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: zh-Hant
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  MenuScannerKit:
+    path: Packages/MenuScannerKit
+
+targets:
+  MenuScanner:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: MenuScannerKit
+        product: MenuScannerCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: 菜單掃描
+        CFBundleDevelopmentRegion: zh_TW
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSCameraUsageDescription: 用相機拍攝菜單。照片只在這台裝置上辨識，不會上傳。
+        NSPhotoLibraryUsageDescription: 從相簿選擇菜單照片。照片只在這台裝置上辨識，不會上傳。
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tw.local.menuscanner
+        TARGETED_DEVICE_FAMILY: "1"
+        # 真機安裝時在 Xcode 的 Signing & Capabilities 選自己的 Team 即可
+        CODE_SIGN_STYLE: Automatic
+
+  MenuScannerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/MenuScannerTests
+    dependencies:
+      - target: MenuScanner
+      - package: MenuScannerKit
+        product: MenuScannerCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tw.local.menuscanner.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  MenuScanner:
+    build:
+      targets:
+        MenuScanner: all
+        MenuScannerTests: [test]
+    test:
+      gatherCoverageData: false
+      targets:
+        - MenuScannerTests
+        - package: MenuScannerKit/MenuScannerCoreTests
