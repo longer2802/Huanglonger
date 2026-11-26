@@ -276,6 +276,11 @@ public struct LayoutParser: Sendable {
             if let box = entries[k].source?.box { entries[k].category = category(at: box.midY) }
         }
 
+        // 這個區塊一列最多幾個價格（用來判斷表頭是否沒讀全）
+        let sectionColumns = final.map { r in
+            SlotAssigner.slots(from: r.prices.map(\.token), useCoordinates: true).filter { $0.explicitSize == nil }.count
+        }.max() ?? 0
+
         for r in final where !r.prices.isEmpty {
             let name = NameCleaner.cleanName(r.fullText)
             let box = r.prices.reduce(r.box) { $0.union($1.box) }
@@ -287,7 +292,7 @@ public struct LayoutParser: Sendable {
             let headers = headerRow(above: r.box, in: headerToks, h: h)
             let slots = SlotAssigner.slots(from: r.prices.map(\.token), useCoordinates: true)
             let volumeHint = r.lineIDs.compactMap { lineVolume[$0] }.first
-            let assigned = SlotAssigner.assign(slots: slots, headers: headers, hasCoordinates: true, volumeHint: volumeHint)
+            let assigned = SlotAssigner.assign(slots: slots, headers: headers, hasCoordinates: true, volumeHint: volumeHint, sectionColumns: sectionColumns)
             let cat = category(at: r.box.midY)
             for a in assigned {
                 entries.append(EntryFactory.make(

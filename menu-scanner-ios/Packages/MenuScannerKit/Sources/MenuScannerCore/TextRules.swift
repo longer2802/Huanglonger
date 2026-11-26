@@ -110,6 +110,8 @@ public enum NoiseFilter {
     static let copyright = Pattern(#"©|\(c\)|版權|著作權|copyright|all rights|reserved"#, caseInsensitive: true)
     static let web = Pattern(#"www\.|https?:|\.com|\.tw|facebook|instagram|(?<![A-Za-z])(?:FB|IG)(?![A-Za-z])|LINE\s*@|@[A-Za-z0-9_]{3,}|加入會員|線上點餐|官方網站|QR\s*code"#, caseInsensitive: true)
     static let footnote = Pattern(#"^(?:[※*]|註\s*:|備註)"#)
+    /// 獨立一行的「甜度冰量固定」說明（前面可能有圖示被讀成數字）
+    static let sweetFixed = Pattern(#"^\S{0,2}\s*(?:甜度冰量固定|甜度固定|冰量固定)\s*$"#)
 
     /// 加料、套餐加價、促銷：無法確定適用範圍，一律放待確認。
     static let promotion = Pattern(#"加料|加購|升級|第二杯|第2杯|買\s*[一二三1-9][0-9]?\s*送\s*[一二三1-9]|特價|現折|折抵|折價|優惠|促銷|折扣|(?<![0-9])[1-9]\s*折|[一二三四五六七八九]折|原價|會員價|加價|套餐\s*(?:\+|加)|(?:^|\s|[\p{Han}])\+\s*\$?[0-9]|加\s*\$?[0-9]+\s*元"#)
@@ -145,6 +147,7 @@ public enum NoiseFilter {
         if dateTime.test(t) { return "日期或營業時間" }
         if isSugarIceTable(t) { return "甜度冰量表" }
         if footnote.test(t) && !promotion.test(t) { return "附註說明" }
+        if sweetFixed.test(t) { return "附註說明" }
         return nil
     }
 
@@ -199,7 +202,13 @@ enum NameCleaner {
     /// 品名後的選項清單，例如「波霸奶茶 (椰果/波波/綠茶凍)」。
     static let optionParen = Pattern(#"\s*[（(][^（）()]*[/、][^（）()]*[）)]\s*$"#)
     /// 品名後的甜度附註，例如「玫瑰奶茶 / 產品略含甜度」。
-    static let sweetnessNote = Pattern(#"\s*/?\s*(?:產品)?(?:略含甜度|甜度冰量固定|甜度固定|冰量固定)\s*$"#)
+    static let sweetnessNote = Pattern(#"\s*/?\s*(?:產品)?[略陷]?含?(?:略含甜度|含甜[度座]|甜度冰量固定|甜度固定|冰量固定|品甜固定)\s*$"#)
+    /// 黏在品名後的溫度／冰沙標記（含 OCR 常見讀法）：冷/熱、冷1熱、冷1點、碎冰沙、砵冰沙/熱、s冰沙、沐沙…
+    static let trailingMarker = Pattern(#"(?:\s+(?:[碎砵体體淬]?冰沙|沐沙)(?:\s*[/1lI|]\s*[熱热點])?\s*[)）]?|(?:[碎砵体體淬sS]冰沙|沐沙)(?:\s*[/1lI|]\s*[熱热點])?\s*[)）]?|\s*[冷净淨冶]\s*[/1lI|]?\s*[熱热點路]?\s*[)）]?|\s+[熱热])\s*$"#)
+    /// 黏在品名後的季節標籤（OCR 常漏掉連字號）：5-9月、59月、103月、(59月)、⑤59月、659月
+    static let trailingMonth = Pattern(#"\s*[(（]?\s*[①-⑳@]?\s*(?<![0-9.])[0-9]{1,2}\s*[-~～–]?\s*[0-9]{1,2}\s*月\s*[)）]?\s*$"#)
+    /// 中文品名後同一行的英文副標，例如「阿華田拿鐵 Ovaltine Latte」
+    static let trailingEnglish = Pattern(#"(?<=[\p{Han}])\s+[A-Za-z][A-Za-z &/'.,-]*$"#)
     static let brackets = Pattern(#"[【】\[\]「」《》<>]"#)
     static let categoryRX = Pattern(#"(?:系列|類|專區|特調|推薦|人氣|精選|限定|MENU)$|^[【\[「《<].*[】\]」》>]$"#, caseInsensitive: true)
     static let headerFillers: Set<String> = [
@@ -212,8 +221,16 @@ enum NameCleaner {
         t = leadingMarker.replace(t, with: "")
         t = hanSpace.replace(t, with: "")
         t = trailingCurrency.replace(t, with: "")
-        t = sweetnessNote.replace(t, with: "")
-        t = optionParen.replace(t, with: "")
+        // 尾端附註可能疊在一起（「梅子冰茶 品甜固定 冷)」），重複剝到沒有變化
+        for _ in 0..<3 {
+            let before = t
+            t = trailingEnglish.replace(t, with: "")
+            t = trailingMarker.replace(t, with: "")
+            t = trailingMonth.replace(t, with: "")
+            t = sweetnessNote.replace(t, with: "")
+            t = optionParen.replace(t, with: "")
+            if t == before { break }
+        }
         t = edgeJunk.replace(t, with: "")
         t = spaces.replace(t, with: " ")
         return t.trimmingCharacters(in: .whitespaces)

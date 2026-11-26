@@ -117,4 +117,48 @@ final class RealMenuRuleTests: XCTestCase {
         XCTAssertEqual(NameCleaner.cleanName("a 柳橙芒果果粒茶"), "柳橙芒果果粒茶")
         XCTAssertEqual(NameCleaner.cleanName("Latte"), "Latte")
     }
+
+    /// 分塊 OCR 實際讀到的品名尾巴（溫度標記、季節標籤、甜度附註、英文副標的各種讀法）。
+    func testOCRSuffixVariantsAreStripped() {
+        let cases: [(String, String)] = [
+            ("楊枝甘露2.0 59月体冰沙", "楊枝甘露2.0"),
+            ("芝芝芒果果粒 ⑤59月 s冰沙", "芝芝芒果果粒"),
+            ("芒果果粒波波659月", "芒果果粒波波"),
+            ("芝芝葡萄果粒 103月", "芝芝葡萄果粒"),
+            ("濃厚芋泥鮮奶砵冰沙/熱", "濃厚芋泥鮮奶"),
+            ("冰萃檸檬净/熱", "冰萃檸檬"),
+            ("芝芝金萱雙Q 冷1熱", "芝芝金萱雙Q"),
+            ("芝芝錫蘭奶茶冷1點", "芝芝錫蘭奶茶"),
+            ("柳橙芒果果粒茶 (59月)", "柳橙芒果果粒茶"),
+            ("梅子冰茶品甜固定冷)", "梅子冰茶"),
+            ("阿華田拿鐵 Ovaltine Latte", "阿華田拿鐵"),
+            ("玫瑰紅茶拿鐵/產品陷含甜座", "玫瑰紅茶拿鐵"),
+            // 不能誤刪的真正品名
+            ("芒果冰沙", "芒果冰沙"),
+            ("熱可可", "熱可可"),
+            ("金萱雙Q", "金萱雙Q"),
+            ("蜂蜜檸檬", "蜂蜜檸檬"),
+        ]
+        for (raw, want) in cases {
+            XCTAssertEqual(NameCleaner.cleanName(raw), want, raw)
+        }
+        XCTAssertEqual(NoiseFilter.noiseReason(for: "6 甜度冰量固定"), "附註說明")
+        XCTAssertFalse(Tokenizer.tokens(for: OCRLine(id: 0, text: "紅茶 6", box: .unit)).contains { $0.kind == .price(6) })
+    }
+
+    /// 表頭只讀到「瓶」（圓圈 L 沒讀到）：只給 x 對得上的價格規格，其餘待確認，不能全部標成「瓶」。
+    func testIncompleteHeaderRowOnlyAssignsAlignedPrices() {
+        var f = MenuFixture()
+        f.add("瓶", x: 0.46, y: 0.10, h: 0.02)
+        f.add("芝芝芒果果粒", x: 0.05, y: 0.13, h: 0.02)
+        f.add("90", x: 0.40, y: 0.13, h: 0.02)
+        f.add("蕃茄梅蜜", x: 0.05, y: 0.16, h: 0.02)
+        f.add("70", x: 0.40, y: 0.16, h: 0.02)
+        f.add("100", x: 0.46, y: 0.16, h: 0.02)
+        let r = f.parse()
+        XCTAssertEqual(r.price("蕃茄梅蜜", "瓶"), 100)
+        XCTAssertFalse(r.resolvedEntries.contains { $0.name == "芝芝芒果果粒" && $0.size == "瓶" }, "\(r.summary)")
+        XCTAssertTrue(r.pendingEntries.contains { $0.name == "芝芝芒果果粒" && $0.candidatePrices == [90] })
+        XCTAssertTrue(r.pendingEntries.contains { $0.name == "蕃茄梅蜜" && $0.candidatePrices == [70] })
+    }
 }

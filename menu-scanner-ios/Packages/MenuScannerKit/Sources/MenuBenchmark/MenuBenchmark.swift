@@ -31,7 +31,8 @@ struct BenchmarkCommand {
             case "--draft": draft = true
             case "--dump": dump = true
             case "--ocr-correction": ocr.languageCorrection = true
-            case "--tiles": if let v = args.next(), let n = Int(v) { ocr.tiles = max(1, min(4, n)) }
+            case "--tiles": if let v = args.next(), let n = Int(v) { ocr.tiles = max(1, min(4, n)); ocr.autoTile = false }
+            case "--no-auto-tile": ocr.autoTile = false
             case "-h", "--help":
                 print("用法：menu-benchmark [--root Benchmarks] [--out Benchmarks/results] [--only 檔名關鍵字] [--draft]")
                 print("  --ocr-correction：開啟 Vision 語言校正；--tiles N：切成 N×N 區塊辨識（OCR 實驗用）")

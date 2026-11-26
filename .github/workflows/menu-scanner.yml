@@ -94,7 +94,7 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          for opts in "--ocr-correction" "--tiles 2" "--tiles 2 --ocr-correction" "--tiles 3"; do
+          for opts in "--no-auto-tile" "--tiles 2 --ocr-correction"; do
             echo "=== $opts ==="
             swift run -c release --package-path Packages/MenuScannerKit menu-benchmark \
               --root "$PWD/Benchmarks" --out "$PWD/Benchmarks/results/exp" --only 麻古 --dump $opts \

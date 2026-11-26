@@ -53,7 +53,8 @@ enum SlotAssigner {
         return out
     }
 
-    static func assign(slots: [Slot], headers: [HeaderLabel], hasCoordinates: Bool, volumeHint: String?) -> [AssignedPrice] {
+    /// - Parameter sectionColumns: 同一區塊中一列最多有幾個價格（表頭數少於它，代表表頭沒讀全）。
+    static func assign(slots: [Slot], headers: [HeaderLabel], hasCoordinates: Bool, volumeHint: String?, sectionColumns: Int = 0) -> [AssignedPrice] {
         var out: [AssignedPrice] = []
         for s in slots {
             if let size = s.explicitSize, let a = resolve(s.value, size: size) { out.append(a) }
@@ -82,6 +83,12 @@ enum SlotAssigner {
                 out.append(AssignedPrice(size: "", price: nil, candidates: readable, reasons: reasons))
             }
             return out
+        }
+
+        // 有座標但表頭沒讀全（例如圓圈「L」沒讀到、只讀到「瓶」）：只有 x 對得上的價格才給規格
+        if hasCoordinates, headers.count < max(sectionColumns, rest.count),
+           rest.allSatisfy({ $0.x != nil }), headers.allSatisfy({ $0.x != nil }) {
+            return out + matchWithinTolerance(rest, headers: headers, readable: readable)
         }
 
         if rest.count == headers.count {
@@ -117,6 +124,35 @@ enum SlotAssigner {
             candidates: readable,
             reasons: [hasCoordinates ? .headerCountMismatch : .sizeMappingUncertain]
         ))
+        return out
+    }
+
+    static func matchWithinTolerance(_ rest: [Slot], headers: [HeaderLabel], readable: [Int]) -> [AssignedPrice] {
+        let xs = headers.compactMap(\.x).sorted()
+        let minGap = zip(xs, xs.dropFirst()).map { $1 - $0 }.min()
+        let tol = minGap.map { min($0 * 0.5, 0.06) } ?? 0.025
+        var pairs: [(slot: Int, header: Int, d: Double)] = []
+        for (i, s) in rest.enumerated() {
+            for (j, h) in headers.enumerated() {
+                let d = abs(s.x! - h.x!)
+                if d <= tol { pairs.append((i, j, d)) }
+            }
+        }
+        pairs.sort { $0.d < $1.d }
+        var usedSlots = Set<Int>(), usedHeaders = Set<Int>()
+        var out: [AssignedPrice] = []
+        for p in pairs where !usedSlots.contains(p.slot) && !usedHeaders.contains(p.header) {
+            usedSlots.insert(p.slot)
+            usedHeaders.insert(p.header)
+            if let a = resolve(rest[p.slot].value, size: headers[p.header].label) { out.append(a) }
+        }
+        let leftover: [Int] = rest.indices.filter { !usedSlots.contains($0) }.compactMap { i -> Int? in
+            if case .price(let v) = rest[i].value { return v }
+            return nil
+        }
+        if !leftover.isEmpty {
+            out.append(AssignedPrice(size: "", price: nil, candidates: leftover, reasons: [.headerCountMismatch]))
+        }
         return out
     }
 

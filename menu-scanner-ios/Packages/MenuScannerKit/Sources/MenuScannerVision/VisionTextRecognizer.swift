@@ -92,13 +92,20 @@ public struct VisionTextRecognizer: TextRecognizing {
         public var languageCorrection: Bool
         /// 整張辨識時切成 tiles×tiles 個有重疊的區塊分別辨識（小字較易讀到）；1 為不切。
         public var tiles: Int
+        /// 自動分塊：整張辨識後若中位字高低於 `autoTileBelow`（佔圖高比例），改用 2×2 分塊重新辨識。
+        public var autoTile: Bool
+        public var autoTileBelow: Double
 
-        public init(languageCorrection: Bool = false, tiles: Int = 1) {
+        public init(languageCorrection: Bool = false, tiles: Int = 1, autoTile: Bool = true, autoTileBelow: Double = 0.012) {
             self.languageCorrection = languageCorrection
             self.tiles = tiles
+            self.autoTile = autoTile
+            self.autoTileBelow = autoTileBelow
         }
 
-        public var label: String { "校正\(languageCorrection ? "開" : "關")・分塊 \(tiles)×\(tiles)" }
+        public var label: String {
+            "校正\(languageCorrection ? "開" : "關")・分塊 \(tiles)×\(tiles)" + (autoTile && tiles == 1 ? "（字太小時自動 2×2）" : "")
+        }
     }
 
     public var options: Options
@@ -110,6 +117,20 @@ public struct VisionTextRecognizer: TextRecognizing {
     public func recognize(_ image: CGImage, region: NormRect?, enhanceContrast: Bool, lineIDOffset: Int = 0) async throws -> OCRDocument {
         if region == nil, options.tiles > 1 {
             return try await recognizeTiled(image, enhanceContrast: enhanceContrast, lineIDOffset: lineIDOffset)
+        }
+        if region == nil, options.autoTile {
+            var plain = self
+            plain.options.autoTile = false
+            let doc = try await plain.recognize(image, region: nil, enhanceContrast: enhanceContrast, lineIDOffset: lineIDOffset)
+            let heights = doc.lines.map(\.box.height).sorted()
+            let median = heights.isEmpty ? 1 : heights[heights.count / 2]
+            guard median < options.autoTileBelow else { return doc }
+            var tiled = plain
+            tiled.options.tiles = 2
+            let started = Date()
+            var result = try await tiled.recognize(image, region: nil, enhanceContrast: enhanceContrast, lineIDOffset: lineIDOffset)
+            result.processingSeconds = doc.processingSeconds + Date().timeIntervalSince(started)
+            return result
         }
         let started = Date()
         var work = image
