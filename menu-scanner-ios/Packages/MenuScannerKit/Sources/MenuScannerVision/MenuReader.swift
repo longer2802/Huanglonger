@@ -48,9 +48,11 @@ public enum MenuReader {
             nextID += part.lines.count + 1
             var text = part.lines.sorted { $0.box.minY < $1.box.minY }.map(\.text).joined().filter { !$0.isWhitespace }
             var han = text.unicodeScalars.filter { $0.properties.isIdeographic }.count
+            var glyphs: Int?
             // 直接讀不到：把直排的字切開、橫向排成一行再讀
             if han < 2, let row = VerticalText.horizontalize(image, strip: strip),
-               let horiz = try? await recognizer.recognize(row, region: nil, enhanceContrast: false, lineIDOffset: nextID) {
+               let horiz = try? await recognizer.recognize(row.image, region: nil, enhanceContrast: false, lineIDOffset: nextID) {
+                glyphs = row.glyphs
                 nextID += horiz.lines.count + 1
                 text = horiz.lines.sorted { $0.box.minX < $1.box.minX }.map(\.text).joined().filter { !$0.isWhitespace }
                 han = text.unicodeScalars.filter { $0.properties.isIdeographic }.count
@@ -63,9 +65,12 @@ public enum MenuReader {
                       + part.lines.map(\.text).joined(separator: " | "))
             }
             guard han >= 2 else { continue }
+            // 只留中文字；有雜字、或字數和切出的字數不符，就標待確認
+            let hanOnly = String(text.filter { $0.unicodeScalars.allSatisfy { $0.properties.isIdeographic } })
+            let uncertain = hanOnly.count != text.count || (glyphs.map { $0 != hanOnly.count } ?? false)
             entries.append(MenuParser.makeEntry(
-                name: text, price: o.price, box: strip.union(b), rawText: "\(text) \(o.line.text)",
-                lineIDs: part.lines.map(\.id), lexicon: lexicon
+                name: hanOnly, price: o.price, box: strip.union(b), rawText: "\(text) \(o.line.text)",
+                lineIDs: part.lines.map(\.id), reasons: uncertain ? [.verticalTextUncertain] : [], lexicon: lexicon
             ))
             recovered.insert(o.index)
         }

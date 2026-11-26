@@ -122,9 +122,9 @@ public enum MenuParser {
     }
 
     /// 由其他步驟（例如直書品名補讀）組出的單一價格品項。
-    public static func makeEntry(name: String, price: Int, box: NormRect?, rawText: String, lineIDs: [Int], lexicon: TypoLexicon = .standard) -> MenuEntry {
+    public static func makeEntry(name: String, price: Int, box: NormRect?, rawText: String, lineIDs: [Int], reasons: [ReviewReason] = [], lexicon: TypoLexicon = .standard) -> MenuEntry {
         EntryFactory.make(
-            category: "", name: NameCleaner.cleanName(name), size: SizeLabel.single, price: price, candidates: [], reasons: [],
+            category: "", name: NameCleaner.cleanName(name), size: SizeLabel.single, price: price, candidates: [], reasons: reasons,
             source: EntrySource(box: box, rawText: rawText, lineIDs: lineIDs), lexicon: lexicon
         )
     }

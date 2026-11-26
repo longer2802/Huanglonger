@@ -78,6 +78,7 @@ public enum ReviewReason: Codable, Hashable, Sendable {
     case headerCountMismatch
     case addonOrPromotion
     case rescanConflict
+    case verticalTextUncertain
 
     public var message: String {
         switch self {
@@ -90,6 +91,7 @@ public enum ReviewReason: Codable, Hashable, Sendable {
         case .headerCountMismatch: return "價格數量與表頭杯型數量不一致"
         case .addonOrPromotion: return "加料／套餐／促銷價，適用範圍不明"
         case .rescanConflict: return "重掃結果與原本內容不同"
+        case .verticalTextUncertain: return "直書品名補讀，請對照原圖核對"
         }
     }
 }

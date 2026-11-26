@@ -6,8 +6,8 @@ import MenuScannerCore
 /// 直書文字轉橫排：把一條直排文字依「每列墨水量」切成一個個字，再橫向排成一行，交給 Vision 辨識。
 /// （Vision 不支援直排中文；窄長條裡疊起來的單字也常讀不到，橫排後就能正常辨識。）
 public enum VerticalText {
-    /// - Returns: 橫排後的影像；切不出至少 2 個字時為 nil。
-    public static func horizontalize(_ image: CGImage, strip: NormRect) -> CGImage? {
+    /// - Returns: 橫排後的影像與切出的字數；切不出至少 2 個字時為 nil。
+    public static func horizontalize(_ image: CGImage, strip: NormRect) -> (image: CGImage, glyphs: Int)? {
         guard let crop = VisionImageTools.crop(image, to: strip)?.image else { return nil }
         let w = crop.width, h = crop.height
         guard w >= 8, h >= w else { return nil }
@@ -83,7 +83,8 @@ public enum VerticalText {
             }
             x += w + pad
         }
-        return out.makeImage()
+        guard let made = out.makeImage() else { return nil }
+        return (made, glyphs.count)
     }
 
     /// Otsu 二值化門檻。
