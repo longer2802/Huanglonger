@@ -208,4 +208,5 @@ public struct VisionTextRecognizer: TextRecognizing {
             return Segment(text: segText, box: box, wordBoxes: wordCount > 1 && words.count == wordCount ? words : nil)
         }
     }
+}
 #endif
