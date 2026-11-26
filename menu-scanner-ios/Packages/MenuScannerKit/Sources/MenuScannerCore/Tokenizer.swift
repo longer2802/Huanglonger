@@ -175,7 +175,9 @@ public enum Tokenizer {
                 let before: Character? = s > 0 ? chars[s - 1] : nil
                 let after: Character? = e < n ? chars[e] : nil
                 // 「第2杯」「1號餐」「3Q」這類數字是名稱的一部分，不是價格；個位數（多半是圖示誤讀）也不當售價。
-                let blockedAfter = after.map { $0.isLetter && $0 != "元" } ?? false
+                let matched = String(chars[s..<e])
+                let hasCurrency = matched.hasSuffix("元") || matched.contains("$")
+                let blockedAfter = !hasCurrency && (after.map { $0.isLetter && $0 != "元" } ?? false)
                 let blockedBefore = before == "第"
                 if v >= 10, !blockedAfter, !blockedBefore { kind = .price(v) }
             }

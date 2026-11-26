@@ -104,7 +104,7 @@ public enum TextNormalizer {
 // MARK: - 非品項文字（電話、地址、日期、著作權、甜度冰量表…）
 
 public enum NoiseFilter {
-    static let phone = Pattern(#"電話|TEL|專線|訂購|外送|叫餐|☎|📞|(?<![0-9])0[0-9]{1,3}[-\s)]?[0-9]{3,4}[-\s]?[0-9]{3,4}(?![0-9])"#, caseInsensitive: true)
+    static let phone = Pattern(#"電話|TEL|專線|訂購|外送|叫餐|☎|📞|(?<![0-9])0[0-9]{1,3}[-\s)]?[0-9]{3,4}[-\s]?[0-9]{3,4}(?![0-9])|(?<![0-9])[0-9]{2,3}\s*[-/]\s*[0-9]{6,8}(?![0-9])"#, caseInsensitive: true)
     static let address = Pattern(#"地址|[市縣]\S{0,6}[區鄉鎮]|(?:路|街|大道|巷|弄)\S{0,10}?[0-9]+\s*號"#)
     static let dateTime = Pattern(#"(?:19|20)[0-9]{2}\s*[/.\-年]\s*[0-9]{1,2}|[0-9]{1,2}\s*月\s*[0-9]{1,2}\s*[日號]|[0-9]{1,2}\s*/\s*[0-9]{1,2}\s*[~\-至]\s*[0-9]{1,2}\s*/\s*[0-9]{1,2}|[0-9]{1,2}\s*:\s*[0-9]{2}|活動期間|活動時間|營業時間|公休|(?<![0-9])1[0-2][0-9]\s*[-.]\s*[0-9]{1,2}\s*[.]\s*[0-9]{1,2}(?![0-9])|星期[一二三四五六日]|週[一二三四五六日]"#)
     static let copyright = Pattern(#"©|\(c\)|版權|著作權|copyright|all rights|reserved"#, caseInsensitive: true)
@@ -179,7 +179,7 @@ public struct TypoLexicon: Codable, Hashable, Sendable {
         "芋頸": "芋頭",
         "滷內飯": "滷肉飯",
         "雞服": "雞腿",
-        "便徵": "便當", "會護": "會議",
+        "便徵": "便當", "會護": "會議", "精魚": "鯖魚", "版肉": "燒肉", "建限": "雞腿",
     ])
 
     /// 回傳建議品名；沒有可修正的字詞時為 nil。
@@ -217,8 +217,16 @@ enum NameCleaner {
         "SIZE", "MENU", "PRICE", "ITEM", "冷飲", "熱飲", "杯型", "容量",
     ]
 
+    /// Vision 的繁中模型偶爾輸出簡體字形；菜名常用字轉回繁體（只轉沒有歧義的字）。
+    static let simplifiedToTraditional: [Character: Character] = [
+        "鸡": "雞", "猪": "豬", "鱼": "魚", "饭": "飯", "鲭": "鯖", "鲑": "鮭", "鲈": "鱸", "鳗": "鰻", "虾": "蝦",
+        "汤": "湯", "卤": "滷", "烧": "燒", "酱": "醬", "柠": "檸", "绿": "綠", "红": "紅", "鲜": "鮮", "热": "熱",
+        "冻": "凍", "饮": "飲", "鸭": "鴨", "鹅": "鵝", "喱": "哩", "腊": "臘", "肠": "腸", "炖": "燉", "铁": "鐵",
+        "观": "觀", "乌": "烏", "龙": "龍", "拿": "拿", "铺": "鋪", "鲷": "鯛", "饺": "餃", "馄": "餛", "饨": "飩",
+    ]
+
     static func cleanName(_ s: String) -> String {
-        var t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        var t = String(s.trimmingCharacters(in: .whitespacesAndNewlines).map { simplifiedToTraditional[$0] ?? $0 })
         t = leadingMarker.replace(t, with: "")
         // 不成對的開頭括號（「（日式大雞腿」）
         if let f = t.first, "(（".contains(f), !t.contains(")"), !t.contains("）") { t.removeFirst() }

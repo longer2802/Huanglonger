@@ -94,7 +94,10 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          for opts in "--no-auto-tile" "--tiles 2 --ocr-correction"; do
+          echo "=== 直書補讀除錯 ==="
+          MENU_READER_DEBUG=1 swift run -c release --package-path Packages/MenuScannerKit menu-benchmark \
+            --root "$PWD/Benchmarks" --out "$PWD/Benchmarks/results/exp" --only 小威 | grep -E "直書補讀|正確 [0-9]" | head -40
+          for opts in "--no-auto-tile"; do
             echo "=== $opts ==="
             swift run -c release --package-path Packages/MenuScannerKit menu-benchmark \
               --root "$PWD/Benchmarks" --out "$PWD/Benchmarks/results/exp" --only 麻古 --dump $opts \

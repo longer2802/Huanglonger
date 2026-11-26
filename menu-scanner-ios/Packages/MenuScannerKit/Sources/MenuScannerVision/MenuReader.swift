@@ -43,10 +43,19 @@ public enum MenuReader {
             let height = b.minY - top - 0.006
             guard height > b.height * 1.5 else { continue }
             let strip = NormRect(x: x0, y: top + 0.003, width: x1 - x0, height: height)
-            guard let part = try? await recognizer.recognize(image, region: strip, enhanceContrast: false, lineIDOffset: nextID) else { continue }
+            guard let part = try? await recognizer.recognize(image, region: strip, enhanceContrast: false, lineIDOffset: nextID) else {
+                if ProcessInfo.processInfo.environment["MENU_READER_DEBUG"] != nil {
+                    print(String(format: "  直書補讀 價格 %ld 範圍 x%.3f y%.3f w%.3f h%.3f → 讀不到文字", o.price, strip.x, strip.y, strip.width, strip.height))
+                }
+                continue
+            }
             nextID += part.lines.count + 1
             let text = part.lines.sorted { $0.box.minY < $1.box.minY }.map(\.text).joined().filter { !$0.isWhitespace }
             let han = text.unicodeScalars.filter { $0.properties.isIdeographic }.count
+            if ProcessInfo.processInfo.environment["MENU_READER_DEBUG"] != nil {
+                print(String(format: "  直書補讀 價格 %ld 範圍 x%.3f y%.3f w%.3f h%.3f → %d 行：", o.price, strip.x, strip.y, strip.width, strip.height, part.lines.count)
+                      + part.lines.map(\.text).joined(separator: " | "))
+            }
             guard han >= 2 else { continue }
             entries.append(MenuParser.makeEntry(
                 name: text, price: o.price, box: strip.union(b), rawText: "\(text) \(o.line.text)",
