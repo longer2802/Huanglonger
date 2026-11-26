@@ -1,4 +1,5 @@
 import MenuScannerCore
+import MenuScannerVision
 import Observation
 import SwiftUI
 import UIKit
@@ -8,6 +9,8 @@ enum Route: Hashable {
     case review
     case pasteText
     case library
+    case store(UUID)
+    case version(UUID)
 }
 
 /// 載入後、辨識前的照片（已轉正）與使用者框選的範圍。
@@ -26,11 +29,13 @@ enum RecognitionState: Equatable {
 
 /// 校對中的一份菜單：草稿資料＋辨識用的影像。
 @Observable
-final class ReviewSession {
+final class ReviewSession: Identifiable {
     var draft: MenuDraft
     /// OCR 所用的影像（裁切後）；來源座標都相對於它。貼上文字時為 nil。
     let image: CGImage?
     var selectedID: UUID?
+    /// 已存入店家菜單庫的哪一家店（另存新版時沿用）。
+    var libraryStoreID: UUID?
 
     init(draft: MenuDraft, image: CGImage?) {
         self.draft = draft
@@ -46,12 +51,15 @@ final class AppModel {
     var session: ReviewSession?
     var hasSavedDraft = false
     var homeMessage: String?
+    /// UI 測試：使用記憶體資料庫、每次從乾淨狀態開始。
+    let isUITesting: Bool
 
     @ObservationIgnored private var task: Task<Void, Never>?
     let recognizer: TextRecognizing
     let drafts: DraftStore
 
-    init(recognizer: TextRecognizing = VisionTextRecognizer(), drafts: DraftStore = DraftStore()) {
+    init(recognizer: TextRecognizing = VisionTextRecognizer(), drafts: DraftStore = DraftStore(), isUITesting: Bool = false) {
+        self.isUITesting = isUITesting
         self.recognizer = recognizer
         self.drafts = drafts
         self.hasSavedDraft = drafts.hasDraft
@@ -122,6 +130,20 @@ final class AppModel {
     func parseText(_ text: String) {
         let result = MenuParser.parsePlainText(text)
         session = ReviewSession(draft: MenuDraft(result: result, sourceText: text), image: nil)
+        path.append(.review)
+    }
+
+    // MARK: 店家菜單庫
+
+    /// 從已儲存的版本編輯新稿：舊版保持不變，存檔時成為同一家店的新版本。
+    func editFromVersion(draft: MenuDraft, image: CGImage?, storeID: UUID?) {
+        var d = draft
+        d.id = UUID()
+        d.metadata.reviewedAt = Date()
+        d.updatedAt = Date()
+        let s = ReviewSession(draft: d, image: image)
+        s.libraryStoreID = storeID
+        session = s
         path.append(.review)
     }
 

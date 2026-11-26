@@ -1,4 +1,5 @@
 import MenuScannerCore
+import MenuScannerVision
 import UIKit
 import XCTest
 @testable import MenuScanner

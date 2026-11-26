@@ -12,3 +12,4 @@ Packages/MenuScannerKit/.build/
 Packages/MenuScannerKit/.swiftpm/
 xcuserdata/
 .DS_Store
+Benchmarks/results/

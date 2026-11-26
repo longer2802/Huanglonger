@@ -25,6 +25,8 @@ targets:
     dependencies:
       - package: MenuScannerKit
         product: MenuScannerCore
+      - package: MenuScannerKit
+        product: MenuScannerVision
     info:
       path: App/Info.plist
       properties:
@@ -52,6 +54,8 @@ targets:
       - target: MenuScanner
       - package: MenuScannerKit
         product: MenuScannerCore
+      - package: MenuScannerKit
+        product: MenuScannerVision
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tw.local.menuscanner.tests

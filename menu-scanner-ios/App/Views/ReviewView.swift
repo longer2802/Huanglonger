@@ -20,6 +20,7 @@ private struct EditTarget: Identifiable, Equatable {
 
 struct ReviewContent: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.modelContext) private var context
     @Bindable var session: ReviewSession
 
     enum Tab: String, CaseIterable {
@@ -32,6 +33,8 @@ struct ReviewContent: View {
     @State private var editing: EditTarget?
     @State private var showExport = false
     @State private var toast: String?
+    @State private var showStoreInfo = false
+    @State private var showRescan = false
 
     private var visible: [MenuEntry] {
         onlyPending ? session.draft.attentionEntries : session.draft.entries
@@ -56,8 +59,14 @@ struct ReviewContent: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button { saveToLibrary() } label: { Label("存入店家菜單庫（另存新版）", systemImage: "books.vertical") }
+                        .accessibilityIdentifier("saveToLibrary")
                     Button { save() } label: { Label("儲存草稿", systemImage: "square.and.arrow.down") }
                     Button { addNew() } label: { Label("新增品項", systemImage: "plus") }
+                    if session.image != nil {
+                        Button { showRescan = true } label: { Label("框選單欄重掃", systemImage: "rectangle.dashed") }
+                            .accessibilityIdentifier("rescanColumn")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -98,6 +107,12 @@ struct ReviewContent: View {
         }
         .sheet(isPresented: $showExport) {
             ExportView(session: session)
+        }
+        .sheet(isPresented: $showStoreInfo) {
+            StoreInfoSheet(session: session) { saveToLibrary() }
+        }
+        .sheet(isPresented: $showRescan) {
+            RescanView(session: session, recognizer: model.recognizer)
         }
         .overlay(alignment: .top) {
             if let toast {
@@ -193,6 +208,13 @@ struct ReviewContent: View {
                     .foregroundStyle(.secondary)
                     .padding()
             }
+            Button {
+                showRescan = true
+            } label: {
+                Label("框選單欄重掃", systemImage: "rectangle.dashed")
+            }
+            .buttonStyle(.bordered)
+            .padding(.bottom)
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
@@ -208,6 +230,21 @@ struct ReviewContent: View {
     }
 
     // MARK: 動作
+
+    /// 另存新版到店家菜單庫；沒有店名時先補店家資訊。
+    private func saveToLibrary() {
+        if session.draft.metadata.storeName.trimmingCharacters(in: .whitespaces).isEmpty {
+            showStoreInfo = true
+            return
+        }
+        do {
+            let v = try MenuLibrary.saveVersion(session.draft, image: session.image, storeID: session.libraryStoreID, in: context)
+            session.libraryStoreID = v.store?.id
+            show("已存入店家菜單庫：第 \(v.number) 版")
+        } catch {
+            show("儲存失敗：\(error.localizedDescription)")
+        }
+    }
 
     private func save() {
         show(model.saveDraft() ? "已儲存草稿" : "儲存失敗")

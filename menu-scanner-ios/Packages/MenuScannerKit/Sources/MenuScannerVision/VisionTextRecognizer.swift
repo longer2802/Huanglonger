@@ -1,14 +1,18 @@
+#if canImport(Vision)
 import CoreGraphics
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import Foundation
+import ImageIO
 import MenuScannerCore
 import Vision
 
-enum OCRError: LocalizedError, Equatable {
+public enum OCRError: LocalizedError, Equatable {
     case invalidImage
     case noReadableText
     case failed(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidImage: return "無法讀取這張圖片"
         case .noReadableText: return "找不到可讀的文字，請把菜單拍清楚、拍完整後再試一次"
@@ -17,7 +21,7 @@ enum OCRError: LocalizedError, Equatable {
     }
 }
 
-protocol TextRecognizing: Sendable {
+public protocol TextRecognizing: Sendable {
     /// - Parameters:
     ///   - image: 已轉正（`.up`）的整張原圖。
     ///   - region: 只辨識這個範圍（左上原點正規化座標）；nil 為整張。
@@ -26,18 +30,60 @@ protocol TextRecognizing: Sendable {
     func recognize(_ image: CGImage, region: NormRect?, enhanceContrast: Bool, lineIDOffset: Int) async throws -> OCRDocument
 }
 
+public extension NormRect {
+    init(_ rect: CGRect) {
+        self.init(x: Double(rect.origin.x), y: Double(rect.origin.y), width: Double(rect.size.width), height: Double(rect.size.height))
+    }
+}
+
+/// 不依賴 UIKit 的影像處理（App 與 macOS 基準工具共用）。
+public enum VisionImageTools {
+    /// 依正規化範圍裁切，並回傳實際裁到的範圍（像素取整後），供座標換算使用。
+    public static func crop(_ image: CGImage, to region: NormRect) -> (image: CGImage, region: NormRect)? {
+        let p = VisionGeometry.pixelRect(region, imageWidth: image.width, imageHeight: image.height)
+        guard let cropped = image.cropping(to: CGRect(x: p.x, y: p.y, width: p.width, height: p.height)) else { return nil }
+        let actual = VisionGeometry.normRect(pixelX: p.x, pixelY: p.y, width: cropped.width, height: cropped.height, imageWidth: image.width, imageHeight: image.height)
+        return (cropped, actual)
+    }
+
+    /// 局部重掃用：灰階＋提高對比。
+    public static func enhanceContrast(_ image: CGImage) -> CGImage? {
+        let input = CIImage(cgImage: image)
+        let filter = CIFilter.colorControls()
+        filter.inputImage = input
+        filter.saturation = 0
+        filter.contrast = 1.5
+        filter.brightness = 0.02
+        guard let output = filter.outputImage else { return nil }
+        return CIContext().createCGImage(output, from: input.extent)
+    }
+
+    /// 從檔案讀圖並依 EXIF 方向轉正，長邊最多 `maxPixelSize`（基準測試工具使用）。
+    public static func loadUpright(url: URL, maxPixelSize: Int = 4096) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+}
+
 /// Apple Vision 文字辨識（完全在裝置上執行，不連網）。
-struct VisionTextRecognizer: TextRecognizing {
-    func recognize(_ image: CGImage, region: NormRect?, enhanceContrast: Bool, lineIDOffset: Int = 0) async throws -> OCRDocument {
+public struct VisionTextRecognizer: TextRecognizing {
+    public init() {}
+
+    public func recognize(_ image: CGImage, region: NormRect?, enhanceContrast: Bool, lineIDOffset: Int = 0) async throws -> OCRDocument {
         let started = Date()
         var work = image
         var crop = NormRect.unit
         if let region {
-            guard let c = ImagePreparation.crop(image, to: region) else { throw OCRError.invalidImage }
+            guard let c = VisionImageTools.crop(image, to: region) else { throw OCRError.invalidImage }
             work = c.image
             crop = c.region
         }
-        if enhanceContrast, let enhanced = ImagePreparation.enhanceContrast(work) {
+        if enhanceContrast, let enhanced = VisionImageTools.enhanceContrast(work) {
             work = enhanced
         }
 
@@ -109,12 +155,12 @@ struct VisionTextRecognizer: TextRecognizing {
         for w in words {
             guard let range = s.range(of: w, range: cursor..<s.endIndex),
                   let observation = (try? text.boundingBox(for: range)) ?? nil else { return nil }
-            let rect = observation.boundingBox
             cursor = range.upperBound
-            let box = VisionGeometry.toImageSpace(visionBox: NormRect(rect), crop: crop)
+            let box = VisionGeometry.toImageSpace(visionBox: NormRect(observation.boundingBox), crop: crop)
             if box.width > lineBox.width * 0.95 { return nil }
             boxes.append(box)
         }
         return boxes
     }
 }
+#endif

@@ -153,17 +153,6 @@ struct CameraPicker: UIViewControllerRepresentable {
     }
 }
 
-struct LibraryPlaceholderView: View {
-    var body: some View {
-        ContentUnavailableView(
-            "店家菜單庫",
-            systemImage: "books.vertical",
-            description: Text("第三階段開放：本機儲存、搜尋店名分店、版本與匯出。目前可先用校對畫面的「儲存草稿」。")
-        )
-        .navigationTitle("店家菜單庫")
-    }
-}
-
 struct PasteTextView: View {
     @Environment(AppModel.self) private var model
     @State private var text = ""

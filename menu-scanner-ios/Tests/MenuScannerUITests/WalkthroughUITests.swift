@@ -125,3 +125,33 @@ final class WalkthroughUITests: XCTestCase {
         shot("09-分享面板")
     }
 }
+
+/// 店家菜單庫：內建示範菜單 → 版本 → 從舊版編輯新稿 → 另存新版。
+final class LibraryUITests: XCTestCase {
+    func testDemoMenuInLibraryAndSaveNewVersion() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.buttons["library"].tap()
+        let store = app.buttons["storeRow"].firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 10), "應有內建示範菜單")
+        store.tap()
+
+        let version = app.buttons["versionRow"].firstMatch
+        XCTAssertTrue(version.waitForExistence(timeout: 5))
+        version.tap()
+        let edit = app.buttons["editFromVersion"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.tap()
+
+        XCTAssertTrue(app.buttons["entryRow"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["reviewMenu"].tap()
+        app.buttons["saveToLibrary"].tap()
+        // 回到店家頁，應有第 2 版
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.staticTexts["第 2 版"].waitForExistence(timeout: 5))
+    }
+}

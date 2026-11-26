@@ -1,9 +1,9 @@
-import CoreImage
-import CoreImage.CIFilterBuiltins
 import MenuScannerCore
+import MenuScannerVision
 import UIKit
 
 /// 照片方向、縮放、裁切、對比增強集中在這裡處理，確保 OCR 與畫面高亮使用同一個座標系。
+/// 裁切與對比增強的實作在 MenuScannerVision（與 macOS 基準測試工具共用）。
 enum ImagePreparation {
     /// 保留足夠解析度給小字，但避免超大照片拖慢 Vision。
     static let maxPixelDimension: CGFloat = 4096
@@ -34,32 +34,16 @@ enum ImagePreparation {
         return uprightCGImage(from: UIImage(cgImage: image, scale: 1, orientation: orientation))
     }
 
-    /// 依正規化範圍裁切，並回傳實際裁到的範圍（像素取整後），供座標換算使用。
     static func crop(_ image: CGImage, to region: NormRect) -> (image: CGImage, region: NormRect)? {
-        let p = VisionGeometry.pixelRect(region, imageWidth: image.width, imageHeight: image.height)
-        guard let cropped = image.cropping(to: CGRect(x: p.x, y: p.y, width: p.width, height: p.height)) else { return nil }
-        let actual = VisionGeometry.normRect(pixelX: p.x, pixelY: p.y, width: cropped.width, height: cropped.height, imageWidth: image.width, imageHeight: image.height)
-        return (cropped, actual)
+        VisionImageTools.crop(image, to: region)
     }
 
-    /// 局部重掃用：灰階＋提高對比。
     static func enhanceContrast(_ image: CGImage) -> CGImage? {
-        let input = CIImage(cgImage: image)
-        let filter = CIFilter.colorControls()
-        filter.inputImage = input
-        filter.saturation = 0
-        filter.contrast = 1.5
-        filter.brightness = 0.02
-        guard let output = filter.outputImage else { return nil }
-        return CIContext(options: [.useSoftwareRenderer: false]).createCGImage(output, from: input.extent)
+        VisionImageTools.enhanceContrast(image)
     }
 }
 
 extension NormRect {
-    init(_ rect: CGRect) {
-        self.init(x: Double(rect.origin.x), y: Double(rect.origin.y), width: Double(rect.size.width), height: Double(rect.size.height))
-    }
-
     /// 轉成畫面上（左上原點）的矩形。
     func cgRect(in size: CGSize) -> CGRect {
         CGRect(x: x * size.width, y: y * size.height, width: width * size.width, height: height * size.height)

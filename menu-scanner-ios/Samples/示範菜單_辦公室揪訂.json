@@ -1,0 +1,136 @@
+{
+  "app": "office-group-order",
+  "exportedAt": "2026-11-26T00:00:00Z",
+  "orders": [],
+  "photos": [],
+  "templates": [
+    {
+      "id": "menu-scanner-427ce09f9a051bca",
+      "kind": "drink",
+      "menu": {
+        "addons": [],
+        "items": [
+          {
+            "category": "醇茶",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i1",
+            "name": "紅茶",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i1-v1",
+                "label": "中杯",
+                "price": 30
+              },
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i1-v2",
+                "label": "大杯",
+                "price": 35
+              }
+            ]
+          },
+          {
+            "category": "醇茶",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i2",
+            "name": "綠茶",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i2-v1",
+                "label": "中杯",
+                "price": 30
+              },
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i2-v2",
+                "label": "大杯",
+                "price": 35
+              }
+            ]
+          },
+          {
+            "category": "醇茶",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i3",
+            "name": "蜜桃烏龍",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i3-v1",
+                "label": "中杯",
+                "price": 50
+              },
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i3-v2",
+                "label": "大杯",
+                "price": 60
+              }
+            ]
+          },
+          {
+            "category": "奶茶",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i4",
+            "name": "珍珠奶茶",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i4-v1",
+                "label": "中杯",
+                "price": 50
+              },
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i4-v2",
+                "label": "大杯",
+                "price": 60
+              }
+            ]
+          },
+          {
+            "category": "奶茶",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i5",
+            "name": "鮮奶茶",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i5-v1",
+                "label": "大杯",
+                "price": 65
+              }
+            ]
+          },
+          {
+            "category": "特調",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i6",
+            "name": "冬瓜檸檬",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i6-v1",
+                "label": "中杯",
+                "price": 45
+              },
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i6-v2",
+                "label": "大杯",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "category": "特調",
+            "flags": [],
+            "id": "menu-scanner-427ce09f9a051bca-i7",
+            "name": "檸檬愛玉",
+            "variants": [
+              {
+                "id": "menu-scanner-427ce09f9a051bca-i7-v1",
+                "label": "",
+                "price": 50
+              }
+            ]
+          }
+        ]
+      },
+      "savedAt": 1795651200000,
+      "vendorName": "【示範】小森林茶飲（虛構）（示範店）"
+    }
+  ],
+  "version": 1
+}
