@@ -57,13 +57,26 @@ cd Packages/MenuScannerKit && swift test         # 只跑解析器等核心測�
 ## 基準測試（準確率驗收）
 
 ```bash
-scripts/benchmark.sh                 # 全部圖片
+scripts/benchmark.sh                 # 調整組：Benchmarks/menus（不含 holdout）
 scripts/benchmark.sh --only 合成     # 只跑檔名含「合成」的圖
+scripts/benchmark.sh --holdout       # 正式驗收：Benchmarks/holdout（只跑一次）
 ```
 
-在 macOS 上用 Apple Vision 辨識 `Benchmarks/menus/` 的每張圖、套用與 App 相同的解析器，和 `Benchmarks/answers/` 的標準答案比對，報告寫到 `Benchmarks/results/`（`latest.md`、`report-時間.md`、`report-時間.csv`）。
+在 macOS 上用 Apple Vision 辨識每張圖、套用與 App 相同的解析器，和標準答案比對，報告寫到 `Benchmarks/results/`（`latest.md`、`report-時間.md`、`report-時間.csv`；holdout 在 `results/holdout/`）。
 
 > macOS 與 iOS 的 Vision 模型版本可能略有差異；正式驗收數字以 macOS 工具為準即可，若要確認手機上的結果，可用 App 辨識同一張圖後匯出 CSV 對照。
+
+### 驗收流程（調整組／holdout）
+
+1. 把真實菜單與標準答案放進 `Benchmarks/menus/`、`Benchmarks/answers/`，在 `manifest.csv` 填版型、來源＝真實，用途留空。
+2. 分出 holdout（約 1/3，依版型分層、結果固定可重現）：
+   ```bash
+   python3 Benchmarks/tools/split_holdout.py --dry-run   # 先看會移哪些
+   python3 Benchmarks/tools/split_holdout.py             # 移到 Benchmarks/holdout/，用途標「保留」，其餘標「調整」
+   ```
+   已標「調整」的菜單（已經用來調過規則的）不會被移進 holdout；holdout 已有內容時不會重新分割。
+3. 只用調整組反覆執行 `scripts/benchmark.sh`，依報告的漏抓／多抓明細修改 `Packages/MenuScannerKit/Sources/MenuScannerCore/` 的規則，並在 `RealMenuRuleTests` 加回歸測試。**不要打開 holdout 的報告或圖片來調規則。**
+4. 規則定案並 commit 後，執行一次 `scripts/benchmark.sh --holdout`。腳本會在 `Benchmarks/holdout/RUNS.md` 記錄時間與規則版本；已跑過時會拒絕（除非 `--force`，紀錄會註明重跑）。holdout 報告分版型列出兩項指標，就是正式驗收結果。
 
 ### 放入真實菜單
 
@@ -169,7 +182,7 @@ Packages/MenuScannerKit/
   Tests/MenuScannerCoreTests/     核心單元測試（固定 OCR 座標，不需要 Vision）
 Tests/MenuScannerTests/           App 測試
 Tests/MenuScannerUITests/         UI 流程測試
-Benchmarks/                       menus/、answers/、manifest.csv、tools/make_synthetic.py
+Benchmarks/                       menus/、answers/、manifest.csv、holdout/、tools/（合成產生器、holdout 分割）
 Samples/                          範例 CSV／TXT／辦公室揪訂 JSON
 scripts/test.sh, benchmark.sh
 ```

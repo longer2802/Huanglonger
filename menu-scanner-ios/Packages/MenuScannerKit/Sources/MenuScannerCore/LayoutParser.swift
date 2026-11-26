@@ -78,8 +78,11 @@ public struct LayoutParser: Sendable {
                     if isHeaderLine {
                         role = NameCleaner.isHeaderFiller(t.raw) ? .ignored : .category
                     } else {
-                        role = .name
+                        // 截圖狀態列「5G」之類不是品名；不讓它影響分欄
+                        role = NameCleaner.isPlausibleName(t.raw) ? .name : .ignored
                     }
+                case .note:
+                    role = .ignored
                 case .header, .multiHeader:
                     role = isHeaderLine ? .header : .ignored
                 case .volume(let v):

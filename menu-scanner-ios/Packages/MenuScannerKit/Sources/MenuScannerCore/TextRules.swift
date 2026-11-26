@@ -87,6 +87,7 @@ public enum TextNormalizer {
         case "小", "小杯": return "小杯"
         case "特大", "特大杯": return "特大杯"
         case "單一", "單價", "單一價": return SizeLabel.single
+        case "瓶", "瓶裝": return "瓶"
         default: break
         }
         if let m = volumeRX.matches(t).first, let n = Pattern.group(m, 1, in: t), let unit = Pattern.group(m, 2, in: t) {
@@ -106,22 +107,23 @@ public enum NoiseFilter {
     static let phone = Pattern(#"電話|TEL|專線|訂購|外送|叫餐|☎|📞|(?<![0-9])0[0-9]{1,3}[-\s)]?[0-9]{3,4}[-\s]?[0-9]{3,4}(?![0-9])"#, caseInsensitive: true)
     static let address = Pattern(#"地址|[市縣]\S{0,6}[區鄉鎮]|(?:路|街|大道|巷|弄)\S{0,10}?[0-9]+\s*號"#)
     static let dateTime = Pattern(#"(?:19|20)[0-9]{2}\s*[/.\-年]\s*[0-9]{1,2}|[0-9]{1,2}\s*月\s*[0-9]{1,2}\s*[日號]|[0-9]{1,2}\s*/\s*[0-9]{1,2}\s*[~\-至]\s*[0-9]{1,2}\s*/\s*[0-9]{1,2}|[0-9]{1,2}\s*:\s*[0-9]{2}|活動期間|活動時間|營業時間|公休|星期[一二三四五六日]|週[一二三四五六日]"#)
-    static let copyright = Pattern(#"©|\(c\)|版權|copyright|all rights|reserved"#, caseInsensitive: true)
-    static let web = Pattern(#"www\.|https?:|\.com|\.tw|facebook|instagram|(?<![A-Za-z])(?:FB|IG)(?![A-Za-z])|LINE\s*@|@[A-Za-z0-9_]{3,}"#, caseInsensitive: true)
+    static let copyright = Pattern(#"©|\(c\)|版權|著作權|copyright|all rights|reserved"#, caseInsensitive: true)
+    static let web = Pattern(#"www\.|https?:|\.com|\.tw|facebook|instagram|(?<![A-Za-z])(?:FB|IG)(?![A-Za-z])|LINE\s*@|@[A-Za-z0-9_]{3,}|加入會員|線上點餐|官方網站|QR\s*code"#, caseInsensitive: true)
     static let footnote = Pattern(#"^(?:[※*]|註\s*:|備註)"#)
 
     /// 加料、套餐加價、促銷：無法確定適用範圍，一律放待確認。
-    static let promotion = Pattern(#"加料|加購|升級|第二杯|第2杯|買\s*[一二三1-9]\s*送\s*[一二三1-9]|特價|優惠|促銷|折扣|(?<![0-9])[1-9]\s*折|[一二三四五六七八九]折|原價|會員價|加價|套餐\s*(?:\+|加)|(?:^|\s|[\p{Han}])\+\s*\$?[0-9]|加\s*\$?[0-9]+\s*元"#)
+    static let promotion = Pattern(#"加料|加購|升級|第二杯|第2杯|買\s*[一二三1-9][0-9]?\s*送\s*[一二三1-9]|特價|現折|折抵|折價|優惠|促銷|折扣|(?<![0-9])[1-9]\s*折|[一二三四五六七八九]折|原價|會員價|加價|套餐\s*(?:\+|加)|(?:^|\s|[\p{Han}])\+\s*\$?[0-9]|加\s*\$?[0-9]+\s*元"#)
 
     static let sugarIceWords: [String] = [
         "正常甜", "全糖", "少糖", "半糖", "微糖", "一分糖", "二分糖", "三分糖", "無糖",
         "完全去冰", "正常冰", "少冰", "微冰", "去冰", "常溫", "溫熱",
-        "甜度冰塊", "甜度", "冰量", "冰塊", "糖度", "正常", "可調整", "可選", "溫", "熱", "冰",
+        "甜度冰塊", "冰量表", "糖量表", "甜度表", "甜度", "冰量", "冰塊", "糖度", "糖量", "正常", "可調整", "可選",
+        "一分", "二分", "三分", "五分", "七分", "八分", "九分", "sugar", "ice", "溫", "熱", "冰",
     ].sorted { $0.count > $1.count }
 
     /// 是否為獨立的甜度／冰量表。要求至少兩個表內字詞，且去掉這些字詞後幾乎沒有其他字，避免誤刪「無糖綠茶」這類品名。
     static func isSugarIceTable(_ text: String) -> Bool {
-        var rest = text
+        var rest = text.lowercased()
         var hits = 0
         for w in sugarIceWords {
             let parts = rest.components(separatedBy: w)
@@ -194,6 +196,10 @@ enum NameCleaner {
     static let trailingCurrency = Pattern(#"\s*(?:NT\$?|NTD|\$)$"#, caseInsensitive: true)
     static let edgeJunk = Pattern(#"^[\s.:…·,，、|/\\\-~+]+|[\s.:…·,，、|/\\\-~+]+$"#)
     static let spaces = Pattern(#"\s{2,}"#)
+    /// 品名後的選項清單，例如「波霸奶茶 (椰果/波波/綠茶凍)」。
+    static let optionParen = Pattern(#"\s*[（(][^（）()]*[/、][^（）()]*[）)]\s*$"#)
+    /// 品名後的甜度附註，例如「玫瑰奶茶 / 產品略含甜度」。
+    static let sweetnessNote = Pattern(#"\s*/?\s*(?:產品)?(?:略含甜度|甜度冰量固定|甜度固定|冰量固定)\s*$"#)
     static let brackets = Pattern(#"[【】\[\]「」《》<>]"#)
     static let categoryRX = Pattern(#"(?:系列|類|專區|特調|推薦|人氣|精選|限定|MENU)$|^[【\[「《<].*[】\]」》>]$"#, caseInsensitive: true)
     static let headerFillers: Set<String> = [
@@ -206,6 +212,8 @@ enum NameCleaner {
         t = leadingMarker.replace(t, with: "")
         t = hanSpace.replace(t, with: "")
         t = trailingCurrency.replace(t, with: "")
+        t = sweetnessNote.replace(t, with: "")
+        t = optionParen.replace(t, with: "")
         t = edgeJunk.replace(t, with: "")
         t = spaces.replace(t, with: " ")
         return t.trimmingCharacters(in: .whitespaces)
@@ -226,6 +234,11 @@ enum NameCleaner {
 
     static func containsHan(_ s: String) -> Bool {
         s.unicodeScalars.contains { $0.properties.isIdeographic }
+    }
+
+    /// 可能是品名：含中文，或至少 3 個英文字母（排除截圖狀態列「5G」、「LTE」以外的雜字）。
+    static func isPlausibleName(_ s: String) -> Bool {
+        containsHan(s) || s.filter({ $0.isLetter && $0.isASCII }).count >= 3
     }
 
     static func isLatinOnly(_ s: String) -> Bool {

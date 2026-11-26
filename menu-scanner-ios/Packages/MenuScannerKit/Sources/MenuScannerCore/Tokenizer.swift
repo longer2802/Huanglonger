@@ -14,6 +14,8 @@ public enum TokenKind: Equatable, Sendable {
     case header(String)
     case multiHeader([String])
     case volume(String)
+    /// 溫度／冰沙標記（冷、熱、冷/熱、碎冰沙）、季節標籤（5-9月）：不是品名也不是價格。
+    case note
 
     var isPriceLike: Bool {
         switch self {
@@ -68,6 +70,23 @@ public enum Tokenizer {
     }
 
     static let dashRX = Pattern(#"^[—–\-─_]+$"#)
+    static let temperatureRX = Pattern(#"^(?:冷|熱|溫|冰|冰沙|碎冰沙|碎冰|常溫|冷飲|熱飲)(?:/(?:冷|熱|溫|冰|冰沙|碎冰沙|碎冰|常溫))*$"#)
+    /// 季節供應標籤，例如「5-9月」「10-3月」。
+    static let monthRangeRX = Pattern(#"[0-9]{1,2}\s*[-~～–]\s*[0-9]{1,2}\s*月"#)
+    static let maskChar: Character = "\u{2063}"
+    /// 連寫的規格表頭，例如「L瓶」「ML」「中杯大杯」。
+    static let joinableLabels = ["特大杯", "大杯", "中杯", "小杯", "瓶裝", "XL", "瓶", "M", "L", "S"]
+
+    static func splitJoinedLabels(_ w: String) -> [String]? {
+        var rest = Substring(w.uppercased())
+        var out: [String] = []
+        while !rest.isEmpty {
+            guard let l = joinableLabels.first(where: { rest.hasPrefix($0) }) else { return nil }
+            out.append(TextNormalizer.normalizeSize(l) ?? l)
+            rest = rest.dropFirst(l.count)
+        }
+        return out.count >= 2 ? out : nil
+    }
     static let readableChars = Set("0123456789")
     static let confusableChars = Set("OoIlSsB?")
 
@@ -92,10 +111,23 @@ public enum Tokenizer {
     }
 
     /// 單一字詞（已半形化）切片。
-    static func pieces(ofWord w: String) -> [Piece] {
-        let chars = Array(w)
-        let n = chars.count
+    static func pieces(ofWord original: String) -> [Piece] {
+        let n = original.count
         guard n > 0 else { return [] }
+        if temperatureRX.test(original) { return [Piece(raw: original, kind: .note, start: 0, end: n)] }
+        // 季節標籤：整個字詞就是標籤 → note；黏在品名後面 → 遮掉（字數不變，位置仍對得上）
+        var w = original
+        let monthMatches = monthRangeRX.matches(original)
+        if !monthMatches.isEmpty {
+            for m in monthMatches.reversed() {
+                guard let r = Range(m.range, in: w) else { continue }
+                w.replaceSubrange(r, with: String(repeating: maskChar, count: w[r].count))
+            }
+            if w.allSatisfy({ $0 == maskChar || $0.isWhitespace }) {
+                return [Piece(raw: original, kind: .note, start: 0, end: n)]
+            }
+        }
+        let chars = Array(w)
 
         if dashRX.test(w) { return [Piece(raw: w, kind: .unavailable, start: 0, end: n)] }
         if !w.allSatisfy({ $0.isNumber }), let label = TextNormalizer.normalizeSize(w) {
@@ -109,6 +141,9 @@ public enum Tokenizer {
                 return [Piece(raw: w, kind: .multiHeader(labels), start: 0, end: n)]
             }
         }
+        if let labels = splitJoinedLabels(w) {
+            return [Piece(raw: w, kind: .multiHeader(labels), start: 0, end: n)]
+        }
         if isUnreadablePrice(w) { return [Piece(raw: w, kind: .unreadable, start: 0, end: n)] }
 
         var out: [Piece] = []
@@ -116,7 +151,7 @@ public enum Tokenizer {
 
         func appendText(_ a: Int, _ b: Int) {
             guard a < b else { return }
-            let raw = String(chars[a..<b])
+            let raw = String(chars[a..<b].filter { $0 != maskChar })
             let trimmed = raw.trimmingCharacters(in: CharacterSet.whitespaces.union(CharacterSet(charactersIn: ":/.,、，|~+")))
             guard !trimmed.isEmpty, !["元", "NT", "NT$", "$", "NTD"].contains(trimmed.uppercased()) else { return }
             out.append(Piece(raw: trimmed, kind: .text, start: a, end: b))
