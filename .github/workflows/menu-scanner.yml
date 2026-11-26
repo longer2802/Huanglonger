@@ -2,7 +2,7 @@ name: menu-scanner-ios
 
 # 菜單掃描器：在 macOS（有 Xcode、iOS 模擬器、Apple Vision）上編譯、測試、跑基準測試。
 # - 推到 claude/menu-scanner-* 或 main 且動到 menu-scanner-ios/ 時自動執行。
-# - commit 訊息含 [holdout] 時，另外執行一次 holdout 正式驗收。
+# - commit 訊息以 [holdout] 開頭時，另外執行一次 holdout 正式驗收。
 on:
   push:
     branches: ["claude/menu-scanner-**", "main"]
@@ -81,10 +81,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: scripts/benchmark.sh
-        run: scripts/benchmark.sh
+        run: scripts/benchmark.sh --dump
       - name: 報告
         if: always()
         run: |
+          for f in Benchmarks/results/ocr/*.txt; do
+            case "$f" in *合成*) ;; *) echo "::group::OCR $f"; cat "$f"; echo "::endgroup::" ;; esac
+          done
           cat Benchmarks/results/latest.md || true
           cat Benchmarks/results/latest.md >> "$GITHUB_STEP_SUMMARY" || true
       - if: always()
@@ -94,8 +97,8 @@ jobs:
           path: menu-scanner-ios/Benchmarks/results
 
   holdout:
-    name: holdout 正式驗收（commit 訊息含 [holdout] 才執行）
-    if: contains(github.event.head_commit.message, '[holdout]')
+    name: holdout 正式驗收（commit 訊息以 [holdout] 開頭才執行）
+    if: startsWith(github.event.head_commit.message, '[holdout]')
     needs: [core-tests]
     runs-on: macos-15
     timeout-minutes: 30

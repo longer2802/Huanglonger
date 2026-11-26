@@ -87,7 +87,7 @@ BENCH_ROOT=Benchmarks/private scripts/benchmark.sh --holdout
 1. 把 repo 改成私有（GitHub › Settings › Danger Zone › Change visibility）。私有 repo 的 macOS runner 會用到免費額度（每月 2,000 分鐘、macOS 以 10 倍計，約可跑 15～20 次），超過要付費。
 2. 只放你自己拍、自己有權使用的照片。
 
-正式驗收：在 commit 訊息加上 `[holdout]`，CI 會另外跑一次 holdout 並列出結果。
+正式驗收：commit 訊息以 `[holdout]` 開頭，CI 會另外跑一次 holdout 並列出結果。
 
 ## 合成資料
 

@@ -20,6 +20,7 @@ struct BenchmarkCommand {
         var out: URL?
         var only: String?
         var draft = false
+        var dump = false
         var args = CommandLine.arguments.dropFirst().makeIterator()
         while let a = args.next() {
             switch a {
@@ -27,8 +28,10 @@ struct BenchmarkCommand {
             case "--out": if let v = args.next() { out = URL(fileURLWithPath: v) }
             case "--only": only = args.next()
             case "--draft": draft = true
+            case "--dump": dump = true
             case "-h", "--help":
                 print("用法：menu-benchmark [--root Benchmarks] [--out Benchmarks/results] [--only 檔名關鍵字] [--draft]")
+                print("  --dump：把原始 OCR 行（座標與文字）寫到 <out>/ocr/<檔名>.txt")
                 print("  --draft：替還沒有標準答案的圖產生 answers/<檔名>.draft.csv，人工對照原圖修正後改名為 <檔名>.csv")
                 return
             default:
@@ -78,6 +81,17 @@ struct BenchmarkCommand {
                 do {
                     let doc = try await recognizer.recognize(image, region: nil, enhanceContrast: false, lineIDOffset: 0)
                     entries = MenuParser.parse(doc).entries
+                    print("  Vision revision \(doc.revision)，語言 \(doc.languages.joined(separator: ","))，\(doc.lines.count) 行")
+                    if dump {
+                        var t = "# \(file)  revision \(doc.revision)  \(doc.languages.joined(separator: ","))\n"
+                        for l in doc.lines {
+                            t += String(format: "%3ld  x%.3f y%.3f w%.3f h%.3f  ", l.id, l.box.x, l.box.y, l.box.width, l.box.height)
+                            t += l.text + (l.wordBoxes == nil ? "" : "  [逐字框 \(l.wordBoxes!.count)]") + "\n"
+                        }
+                        let dir = outDir.appendingPathComponent("ocr")
+                        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+                        try? Data(t.utf8).write(to: dir.appendingPathComponent(base + ".txt"))
+                    }
                 } catch {
                     errorText = error.localizedDescription
                 }

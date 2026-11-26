@@ -117,20 +117,24 @@ public struct VisionTextRecognizer: TextRecognizing {
         try Task.checkCancellation()
 
         var lines: [OCRLine] = []
+        let imageW = Double(image.width), imageH = Double(image.height)
         for observation in observations {
             let candidates = observation.topCandidates(3)
             guard let top = candidates.first else { continue }
-            let text = top.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { continue }
-            let box = VisionGeometry.toImageSpace(visionBox: NormRect(observation.boundingBox), crop: crop)
-            lines.append(OCRLine(
-                id: lineIDOffset + lines.count,
-                text: top.string,
-                confidence: Double(top.confidence),
-                candidates: candidates.map { OCRCandidate(text: $0.string, confidence: Double($0.confidence)) },
-                box: box,
-                wordBoxes: Self.wordBoxes(for: top, lineBox: box, crop: crop)
-            ))
+            guard !top.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            let lineBox = VisionGeometry.toImageSpace(visionBox: NormRect(observation.boundingBox), crop: crop)
+            // Vision 常把左右兩欄同一高度的文字合成一行：依字距切成多段，各自成為一行
+            let segments = Self.segments(for: top, lineBox: lineBox, crop: crop, imageWidth: imageW, imageHeight: imageH)
+            for seg in segments {
+                lines.append(OCRLine(
+                    id: lineIDOffset + lines.count,
+                    text: seg.text,
+                    confidence: Double(top.confidence),
+                    candidates: segments.count == 1 ? candidates.map { OCRCandidate(text: $0.string, confidence: Double($0.confidence)) } : [],
+                    box: seg.box,
+                    wordBoxes: seg.wordBoxes
+                ))
+            }
         }
         if lines.isEmpty { throw OCRError.noReadableText }
 
@@ -145,22 +149,63 @@ public struct VisionTextRecognizer: TextRecognizing {
         )
     }
 
-    /// 每個以空白分隔的字詞的實際位置。部分 revision 對中文只回整行框，此時放棄改用估算。
-    static func wordBoxes(for text: VNRecognizedText, lineBox: NormRect, crop: NormRect) -> [NormRect]? {
-        let s = text.string
-        let words = Tokenizer.words(in: s)
-        guard words.count > 1 else { return nil }
-        var boxes: [NormRect] = []
-        var cursor = s.startIndex
-        for w in words {
-            guard let range = s.range(of: w, range: cursor..<s.endIndex),
-                  let observation = (try? text.boundingBox(for: range)) ?? nil else { return nil }
-            cursor = range.upperBound
-            let box = VisionGeometry.toImageSpace(visionBox: NormRect(observation.boundingBox), crop: crop)
-            if box.width > lineBox.width * 0.95 { return nil }
-            boxes.append(box)
-        }
-        return boxes
+    struct Segment {
+        var text: String
+        var box: NormRect
+        var wordBoxes: [NormRect]?
     }
-}
+
+    /// 以每個字的位置把一行切成多段：字距大於字高 1.5 倍（且至少 8 像素）就切開。
+    /// 取不到逐字位置、或逐字位置都等於整行框（部分 revision 的中文行為）時，維持整行。
+    static func segments(for text: VNRecognizedText, lineBox: NormRect, crop: NormRect, imageWidth: Double, imageHeight: Double) -> [Segment] {
+        let s = text.string
+        let fallback = [Segment(text: s.trimmingCharacters(in: .whitespaces), box: lineBox, wordBoxes: nil)]
+        var chars: [(ch: Character, box: NormRect?)] = []
+        var idx = s.startIndex
+        while idx < s.endIndex {
+            let next = s.index(after: idx)
+            let ch = s[idx]
+            var box: NormRect?
+            if !ch.isWhitespace {
+                guard let obs = (try? text.boundingBox(for: idx..<next)) ?? nil else { return fallback }
+                box = VisionGeometry.toImageSpace(visionBox: NormRect(obs.boundingBox), crop: crop)
+            }
+            chars.append((ch, box))
+            idx = next
+        }
+        let boxes = chars.compactMap(\.box)
+        guard boxes.count >= 2 else { return fallback }
+        if boxes.allSatisfy({ $0.width > lineBox.width * 0.9 }) { return fallback }
+
+        let heightPx = boxes.map(\.height).sorted()[boxes.count / 2] * imageHeight
+        let gapLimit = max(heightPx * 1.5, 8)
+        var groups: [[(ch: Character, box: NormRect?)]] = [[]]
+        var last: NormRect?
+        for c in chars {
+            if let b = c.box, let l = last, (b.minX - l.maxX) * imageWidth > gapLimit, !groups[groups.count - 1].isEmpty {
+                groups.append([])
+            }
+            groups[groups.count - 1].append(c)
+            if let b = c.box { last = b }
+        }
+
+        return groups.compactMap { g -> Segment? in
+            let segText = String(g.map(\.ch)).trimmingCharacters(in: .whitespaces)
+            let bs = g.compactMap(\.box)
+            guard !segText.isEmpty, let first = bs.first else { return nil }
+            let box = bs.dropFirst().reduce(first) { $0.union($1) }
+            var words: [NormRect] = []
+            var cur: NormRect?
+            for (ch, b) in g {
+                if ch.isWhitespace {
+                    if let c = cur { words.append(c); cur = nil }
+                } else if let b {
+                    cur = cur.map { $0.union(b) } ?? b
+                }
+            }
+            if let c = cur { words.append(c) }
+            let wordCount = Tokenizer.words(in: segText).count
+            return Segment(text: segText, box: box, wordBoxes: wordCount > 1 && words.count == wordCount ? words : nil)
+        }
+    }
 #endif
