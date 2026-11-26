@@ -289,10 +289,21 @@ public struct LayoutParser: Sendable {
                 excluded.append(ExcludedLine(text: raw, reason: "找不到品名", box: box))
                 continue
             }
-            let headers = headerRow(above: r.box, in: headerToks, h: h)
+            // 表頭不能跨過分類標題借用（上一個區塊的「L 瓶」不適用於只有「L」的區塊）
+            let blockTop = categories.last(where: { $0.y < r.box.midY })?.y
+            let blockHeaders = headerToks.filter { blockTop == nil || $0.box.midY >= blockTop! - 0.5 * h }
+            let headers = headerRow(above: r.box, in: blockHeaders, h: h)
+            let headerMissingInBlock = headers.isEmpty && !headerToks.isEmpty
             let slots = SlotAssigner.slots(from: r.prices.map(\.token), useCoordinates: true)
             let volumeHint = r.lineIDs.compactMap { lineVolume[$0] }.first
-            let assigned = SlotAssigner.assign(slots: slots, headers: headers, hasCoordinates: true, volumeHint: volumeHint, sectionColumns: sectionColumns)
+            var assigned = SlotAssigner.assign(slots: slots, headers: headers, hasCoordinates: true, volumeHint: volumeHint, sectionColumns: sectionColumns)
+            // 同一欄其他區塊有表頭、這個區塊卻讀不到：單一價格不能直接當「單一」
+            if headerMissingInBlock {
+                assigned = assigned.map { a in
+                    guard a.size == SizeLabel.single, a.reasons.isEmpty, let p = a.price else { return a }
+                    return AssignedPrice(size: "", price: nil, candidates: [p], reasons: [.sizeMappingUncertain])
+                }
+            }
             let cat = category(at: r.box.midY)
             for a in assigned {
                 entries.append(EntryFactory.make(

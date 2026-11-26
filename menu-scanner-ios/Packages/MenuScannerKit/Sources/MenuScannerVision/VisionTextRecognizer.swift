@@ -292,6 +292,27 @@ public struct VisionTextRecognizer: TextRecognizing {
 
         let heightPx = boxes.map(\.height).sorted()[boxes.count / 2] * imageHeight
         let gapLimit = max(heightPx * 1.5, 8)
+        // 品名前的店家圖示（圓形 logo）常被讀成一個字黏在品名前：
+        // 第一個字與後面文字的間距明顯大於一般字距時，丟掉這個字。
+        if let firstIdx = chars.firstIndex(where: { $0.box != nil }),
+           let secondIdx = chars[(firstIdx + 1)...].firstIndex(where: { $0.box != nil }),
+           let b1 = chars[firstIdx].box, let b2 = chars[secondIdx].box,
+           chars[(secondIdx)...].filter({ $0.box != nil }).count >= 2 {
+            let gap = (b2.minX - b1.maxX) * imageWidth
+            // 後面字與字的典型間距
+            var inner: [Double] = []
+            var prev: NormRect?
+            for c in chars[secondIdx...] {
+                guard let b = c.box else { continue }
+                if let p = prev { inner.append((b.minX - p.maxX) * imageWidth) }
+                prev = b
+            }
+            let typical = inner.sorted().dropFirst(inner.count / 2).first ?? 0
+            let isPrice = chars[firstIdx].ch.isNumber || chars[secondIdx].ch.isNumber
+            if !isPrice, gap > max(typical + heightPx * 0.25, heightPx * 0.3), gap < gapLimit {
+                chars.removeSubrange(0...firstIdx)
+            }
+        }
         var groups: [[(ch: Character, box: NormRect?)]] = [[]]
         var last: NormRect?
         for c in chars {
