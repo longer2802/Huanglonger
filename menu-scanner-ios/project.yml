@@ -57,14 +57,29 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: tw.local.menuscanner.tests
         GENERATE_INFOPLIST_FILE: YES
 
+  MenuScannerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/MenuScannerUITests
+    dependencies:
+      - target: MenuScanner
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tw.local.menuscanner.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: MenuScanner
+
 schemes:
   MenuScanner:
     build:
       targets:
         MenuScanner: all
         MenuScannerTests: [test]
+        MenuScannerUITests: [test]
     test:
       gatherCoverageData: false
       targets:
         - MenuScannerTests
+        - MenuScannerUITests
         - package: MenuScannerKit/MenuScannerCoreTests

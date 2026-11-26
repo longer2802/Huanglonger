@@ -30,5 +30,17 @@ print(cands[-1][1] if cands else "")
   DEST="platform=iOS Simulator,id=$SIM_ID"
 fi
 
+SHOTS="$PWD/build/screenshots"
+RESULT="$PWD/build/TestResults.xcresult"
+rm -rf "$SHOTS" "$RESULT"
+mkdir -p "$SHOTS"
+
 echo "▶︎ 目的地：$DEST"
-xcodebuild -project MenuScanner.xcodeproj -scheme MenuScanner -destination "$DEST" test
+# TEST_RUNNER_ 前綴的變數會傳給測試程序：UI 測試把每一步截圖存到 build/screenshots/
+TEST_RUNNER_SCREENSHOT_DIR="$SHOTS" \
+xcodebuild -project MenuScanner.xcodeproj -scheme MenuScanner -destination "$DEST" \
+  -resultBundlePath "$RESULT" test
+
+echo "✔︎ 測試結果：$RESULT"
+echo "✔︎ 截圖：$SHOTS"
+ls -1 "$SHOTS" 2>/dev/null || true
