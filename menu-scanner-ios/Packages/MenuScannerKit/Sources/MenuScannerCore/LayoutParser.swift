@@ -49,6 +49,11 @@ public struct LayoutParser: Sendable {
         }
     }
 
+    func lineVolumeSize(_ toks: [Token]) -> String? {
+        for t in toks { if case .volume(let v) = t.kind { return v } }
+        return nil
+    }
+
     public func parse(_ document: OCRDocument) -> ParseResult {
         var excluded: [ExcludedLine] = []
         var entries: [MenuEntry] = []
@@ -68,6 +73,18 @@ public struct LayoutParser: Sendable {
                 continue
             }
             let lineToks = Tokenizer.tokens(for: line)
+            // 一行裡就是「品名 價格 品名 價格…」（或單組帶「元／$」）：直接成為品項，不進欄位配對
+            if let pairs = Self.inlinePairs(lineToks) {
+                for pair in pairs {
+                    entries.append(EntryFactory.make(
+                        category: "", name: pair.name, size: lineVolumeSize(lineToks) ?? SizeLabel.single, price: pair.price,
+                        candidates: [], reasons: [],
+                        source: EntrySource(box: pair.nameBox.union(pair.priceBox), rawText: pair.nameRaw + " " + pair.priceRaw, lineIDs: [line.id]),
+                        lexicon: lexicon
+                    ))
+                }
+                continue
+            }
             let hasPrice = lineToks.contains { $0.kind.isPriceLike }
             let hasHeader = lineToks.contains { $0.kind.isHeaderLike }
             let isHeaderLine = hasHeader && !hasPrice
@@ -208,6 +225,13 @@ public struct LayoutParser: Sendable {
             }), rows[i + 1].box.minY - rows[i].box.maxY < 0.6 * h, rows[i + 1].prices.isEmpty {
                 rows[i].prices.append(p)
                 rows[i].absorbNext = true
+            } else if let i = rows.indices.filter({
+                // 價格在品名正下方（中間可能隔一行英文小字）
+                rows[$0].prices.isEmpty && rows[$0].box.maxY <= p.box.midY
+                    && p.box.minY - rows[$0].box.maxY < 3.0 * h
+                    && p.box.midX >= rows[$0].box.minX - h && p.box.midX <= rows[$0].box.maxX + h
+            }).max(by: { rows[$0].box.maxY < rows[$1].box.maxY }) {
+                rows[i].prices.append(p)
             } else {
                 excluded.append(ExcludedLine(text: p.raw, reason: "價格找不到同一列的品名", box: p.box))
             }
@@ -321,6 +345,33 @@ public struct LayoutParser: Sendable {
                 return ya != yb ? ya < yb : a.offset < b.offset
             }
             .map(\.element)
+    }
+
+    struct InlinePair {
+        var name: String
+        var nameRaw: String
+        var nameBox: NormRect
+        var price: Int
+        var priceRaw: String
+        var priceBox: NormRect
+    }
+
+    /// 「品名 價格」嚴格交替的一行：至少兩組，或一組且價格帶「元」或「$」。行內有表頭字或多價格時不適用。
+    static func inlinePairs(_ toks: [Token]) -> [InlinePair]? {
+        let useful = toks.filter { $0.kind != .note }
+        guard useful.count >= 2, useful.count % 2 == 0, !useful.contains(where: { $0.kind.isHeaderLike }) else { return nil }
+        var out: [InlinePair] = []
+        var i = 0
+        while i < useful.count {
+            let t = useful[i], p = useful[i + 1]
+            guard t.kind == .text, case .price(let v) = p.kind else { return nil }
+            let name = NameCleaner.cleanName(t.raw)
+            guard NameCleaner.containsHan(name) else { return nil }
+            out.append(InlinePair(name: name, nameRaw: t.raw, nameBox: t.box, price: v, priceRaw: p.raw, priceBox: p.box))
+            i += 2
+        }
+        if out.count == 1, !(out[0].priceRaw.contains("元") || out[0].priceRaw.contains("$")) { return nil }
+        return out
     }
 
     /// 這一列上方最近的一排表頭（依 x 排序）。

@@ -161,4 +161,45 @@ final class RealMenuRuleTests: XCTestCase {
         XCTAssertTrue(r.pendingEntries.contains { $0.name == "芝芝芒果果粒" && $0.candidatePrices == [90] })
         XCTAssertTrue(r.pendingEntries.contains { $0.name == "蕃茄梅蜜" && $0.candidatePrices == [70] })
     }
+
+    /// 一行多組「品名$價格元」、逗號清單（照片格便當傳單常見）。
+    func testInlineNamePricePairs() {
+        var f = MenuFixture()
+        f.add("水煮雞胸$125元", x: 0.25, y: 0.27, h: 0.04, w: 0.22)
+        f.add("鮮蒸蛋$130元", x: 0.50, y: 0.27, h: 0.04, w: 0.19)
+        f.add("香檸鯖魚$155元 日式烤鮭魚$175元蔬食餐盒$85元", x: 0.01, y: 0.58, h: 0.04, w: 0.71)
+        f.add("菜飯便當60元，鯖魚70元，椒麻雞80元", x: 0.32, y: 0.68, h: 0.04, w: 0.6)
+        f.add("115-11.2", x: 0.86, y: 0.80, h: 0.03)
+        let r = f.parse()
+        let got = Set(r.resolvedEntries.map { "\($0.name)|\($0.price!)" })
+        XCTAssertEqual(got, ["水煮雞胸|125", "鮮蒸蛋|130", "香檸鯖魚|155", "日式烤鮭魚|175", "蔬食餐盒|85", "菜飯便當|60", "鯖魚|70", "椒麻雞|80"], "\(r.summary)")
+        XCTAssertTrue(r.resolvedEntries.allSatisfy { $0.size == SizeLabel.single })
+        XCTAssertFalse(r.entries.contains { $0.price == 115 }, "版本日期不能當售價")
+    }
+
+    /// 價格在品名正下方，中間隔一行英文小字（深色海報）。
+    func testPriceBelowName() {
+        var f = MenuFixture()
+        for (i, (name, price)) in [("大爺排骨便當", "100"), ("日式豬排便當", "120"), ("燒肉便當", "120")].enumerated() {
+            let y = 0.35 + Double(i) * 0.07
+            f.add(name, x: 0.06, y: y, h: 0.02, w: 0.18)
+            f.add("Pork Chop Bento", x: 0.08, y: y + 0.02, h: 0.011, w: 0.15)
+            f.add(price, x: 0.13, y: y + 0.041, h: 0.013, w: 0.045)
+        }
+        for (i, (name, price)) in [("炸雞腿便當", "115"), ("炸雞排便當", "110")].enumerated() {
+            let y = 0.35 + Double(i) * 0.07
+            f.add(name, x: 0.31, y: y, h: 0.02, w: 0.15)
+            f.add(price, x: 0.365, y: y + 0.041, h: 0.013, w: 0.045)
+        }
+        let r = f.parse()
+        XCTAssertEqual(Set(r.resolvedEntries.map { "\($0.name)|\($0.price!)" }),
+                       ["大爺排骨便當|100", "日式豬排便當|120", "燒肉便當|120", "炸雞腿便當|115", "炸雞排便當|110"], "\(r.summary)")
+    }
+
+    func testUnbalancedLeadingParenAndDateNoise() {
+        XCTAssertEqual(NameCleaner.cleanName("（日式大雞腿"), "日式大雞腿")
+        XCTAssertEqual(NameCleaner.cleanName("香茅雞腿排(烤)"), "香茅雞腿排(烤)")
+        XCTAssertNotNil(NoiseFilter.noiseReason(for: "114.05.07製"))
+        XCTAssertNil(NoiseFilter.noiseReason(for: "雞腿飯 110"))
+    }
 }

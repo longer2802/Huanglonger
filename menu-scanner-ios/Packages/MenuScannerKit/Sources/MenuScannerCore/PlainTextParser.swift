@@ -121,6 +121,14 @@ public enum MenuParser {
         LayoutParser(lexicon: lexicon).parse(document)
     }
 
+    /// 由其他步驟（例如直書品名補讀）組出的單一價格品項。
+    public static func makeEntry(name: String, price: Int, box: NormRect?, rawText: String, lineIDs: [Int], lexicon: TypoLexicon = .standard) -> MenuEntry {
+        EntryFactory.make(
+            category: "", name: NameCleaner.cleanName(name), size: SizeLabel.single, price: price, candidates: [], reasons: [],
+            source: EntrySource(box: box, rawText: rawText, lineIDs: lineIDs), lexicon: lexicon
+        )
+    }
+
     public static func parsePlainText(_ text: String, lexicon: TypoLexicon = .standard) -> ParseResult {
         PlainTextParser(lexicon: lexicon).parse(text)
     }

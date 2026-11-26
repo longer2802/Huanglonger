@@ -85,8 +85,8 @@ struct BenchmarkCommand {
             var errorText: String?
             if let image = VisionImageTools.loadUpright(url: menusDir.appendingPathComponent(file)) {
                 do {
-                    let doc = try await recognizer.recognize(image, region: nil, enhanceContrast: false, lineIDOffset: 0)
-                    entries = MenuParser.parse(doc).entries
+                    let (doc, parsed) = try await MenuReader.read(image, recognizer: recognizer)
+                    entries = parsed.entries
                     print("  Vision revision \(doc.revision)，語言 \(doc.languages.joined(separator: ","))，\(doc.lines.count) 行")
                     if dump {
                         var t = "# \(file)  revision \(doc.revision)  \(doc.languages.joined(separator: ","))\n"
@@ -142,8 +142,8 @@ struct BenchmarkCommand {
             return
         }
         do {
-            let doc = try await recognizer.recognize(image, region: nil, enhanceContrast: false, lineIDOffset: 0)
-            let entries = MenuParser.parse(doc).entries
+            let (_, parsed) = try await MenuReader.read(image, recognizer: recognizer)
+            let entries = parsed.entries
             var rows = [["品名", "規格", "價格", "草稿備註（核對後整欄可刪）"]]
             for e in entries {
                 let price = e.price.map(String.init) ?? e.candidatePrices.map(String.init).joined(separator: "/")

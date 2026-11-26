@@ -99,8 +99,7 @@ final class AppModel {
                     guard let c = ImagePreparation.crop(p.image, to: p.crop) else { throw OCRError.invalidImage }
                     image = c.image
                 }
-                let doc = try await recognizer.recognize(image, region: nil, enhanceContrast: false, lineIDOffset: 0)
-                let result = await Task.detached(priority: .userInitiated) { MenuParser.parse(doc) }.value
+                let (doc, result) = try await MenuReader.read(image, recognizer: recognizer)
                 try Task.checkCancellation()
                 guard let self else { return }
                 var meta = MenuMetadata()

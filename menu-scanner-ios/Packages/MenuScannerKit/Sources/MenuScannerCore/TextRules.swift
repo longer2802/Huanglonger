@@ -106,7 +106,7 @@ public enum TextNormalizer {
 public enum NoiseFilter {
     static let phone = Pattern(#"電話|TEL|專線|訂購|外送|叫餐|☎|📞|(?<![0-9])0[0-9]{1,3}[-\s)]?[0-9]{3,4}[-\s]?[0-9]{3,4}(?![0-9])"#, caseInsensitive: true)
     static let address = Pattern(#"地址|[市縣]\S{0,6}[區鄉鎮]|(?:路|街|大道|巷|弄)\S{0,10}?[0-9]+\s*號"#)
-    static let dateTime = Pattern(#"(?:19|20)[0-9]{2}\s*[/.\-年]\s*[0-9]{1,2}|[0-9]{1,2}\s*月\s*[0-9]{1,2}\s*[日號]|[0-9]{1,2}\s*/\s*[0-9]{1,2}\s*[~\-至]\s*[0-9]{1,2}\s*/\s*[0-9]{1,2}|[0-9]{1,2}\s*:\s*[0-9]{2}|活動期間|活動時間|營業時間|公休|星期[一二三四五六日]|週[一二三四五六日]"#)
+    static let dateTime = Pattern(#"(?:19|20)[0-9]{2}\s*[/.\-年]\s*[0-9]{1,2}|[0-9]{1,2}\s*月\s*[0-9]{1,2}\s*[日號]|[0-9]{1,2}\s*/\s*[0-9]{1,2}\s*[~\-至]\s*[0-9]{1,2}\s*/\s*[0-9]{1,2}|[0-9]{1,2}\s*:\s*[0-9]{2}|活動期間|活動時間|營業時間|公休|(?<![0-9])1[0-2][0-9]\s*[-.]\s*[0-9]{1,2}\s*[.]\s*[0-9]{1,2}(?![0-9])|星期[一二三四五六日]|週[一二三四五六日]"#)
     static let copyright = Pattern(#"©|\(c\)|版權|著作權|copyright|all rights|reserved"#, caseInsensitive: true)
     static let web = Pattern(#"www\.|https?:|\.com|\.tw|facebook|instagram|(?<![A-Za-z])(?:FB|IG)(?![A-Za-z])|LINE\s*@|@[A-Za-z0-9_]{3,}|加入會員|線上點餐|官方網站|QR\s*code"#, caseInsensitive: true)
     static let footnote = Pattern(#"^(?:[※*]|註\s*:|備註)"#)
@@ -179,6 +179,7 @@ public struct TypoLexicon: Codable, Hashable, Sendable {
         "芋頸": "芋頭",
         "滷內飯": "滷肉飯",
         "雞服": "雞腿",
+        "便徵": "便當", "會護": "會議",
     ])
 
     /// 回傳建議品名；沒有可修正的字詞時為 nil。
@@ -219,6 +220,8 @@ enum NameCleaner {
     static func cleanName(_ s: String) -> String {
         var t = s.trimmingCharacters(in: .whitespacesAndNewlines)
         t = leadingMarker.replace(t, with: "")
+        // 不成對的開頭括號（「（日式大雞腿」）
+        if let f = t.first, "(（".contains(f), !t.contains(")"), !t.contains("）") { t.removeFirst() }
         t = hanSpace.replace(t, with: "")
         t = trailingCurrency.replace(t, with: "")
         // 尾端附註可能疊在一起（「梅子冰茶 品甜固定 冷)」），重複剝到沒有變化
